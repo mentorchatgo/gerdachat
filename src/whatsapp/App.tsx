@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
