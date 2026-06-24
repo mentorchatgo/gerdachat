@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@theme {
+  --color-wa-bg: #111b21;
+  --color-wa-panel: #202c33;
+  --color-wa-chat-bg: #0b141a;
+  --color-wa-primary: #00a884;
+  --color-wa-msg-in: #202c33;
+  --color-wa-msg-out: #005c4b;
+  --color-wa-text: #e9edef;
+  --color-wa-text-muted: #8696a0;
+  --color-wa-border: rgba(134, 150, 160, 0.15); /* Softer border */
+  --color-wa-hover: #202c33; /* matching web whatsapp */
+}
+
+body {
+  background-color: var(--color-wa-bg);
+  color: var(--color-wa-text);
+  overflow: hidden;
+}
+
+/* Custom Webkit Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+}
+
+/* WhatsApp Message Tails */
+.msg-tail-in::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -8px;
+  width: 0;
+  height: 0;
+  border-top: 0px solid transparent;
+  border-bottom: 12px solid transparent;
+  border-right: 12px solid var(--color-wa-msg-in);
+}
+
+.msg-tail-out::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -8px;
+  width: 0;
+  height: 0;
+  border-top: 0px solid transparent;
+  border-bottom: 12px solid transparent;
+  border-left: 12px solid var(--color-wa-msg-out);
+}
+
