@@ -77,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "Whatsapp Online" },
+      { name: "description", content: "Just normal whatsapp online." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "Whatsapp Online" },
+      { property: "og:description", content: "Just normal whatsapp online." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Whatsapp Online" },
+      { name: "twitter:description", content: "Just normal whatsapp online." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/59e3b1a2-4e67-49a6-8a9e-80dbb9dd1f04" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/59e3b1a2-4e67-49a6-8a9e-80dbb9dd1f04" },
     ],
     links: [
       {
