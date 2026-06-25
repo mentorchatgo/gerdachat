@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { get, set } from "idb-keyval";
 import { MemoryService } from "./memoryService";
-import { chatTurn, generateContactImage } from "./ai.functions";
+import { chatTurn, generateContactImage, ttsForText } from "./ai.functions";
 
 export interface ChatMessage {
   id: string;
