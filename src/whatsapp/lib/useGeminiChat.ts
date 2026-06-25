@@ -107,9 +107,11 @@ const getCustomSystemPrompt = (sysInstruct: string, voicePrompt?: string) => {
   if (voicePrompt) {
     prompt += `\n\nStemstijl: ${voicePrompt}`;
   }
-  prompt += `\n\nAls de gebruiker om een foto of selfie vraagt, antwoord dan met:
-  [GENERATE_IMAGE: korte beschrijving van wat er op de foto staat]
-(eventueel met begeleidende tekst).`;
+  prompt += `\n\nFOTO-GEDRAG: Wees PROACTIEF met foto's sturen. Stuur regelmatig uit jezelf een foto (ongeveer elke 3-5 berichten als het in de context past), ook zonder dat erom gevraagd wordt — bijvoorbeeld wat je nu eet, waar je bent, wat je doet, een rare selfie, etc. Varieer ELKE keer het onderwerp en de situatie zodat het nooit dezelfde foto wordt.
+
+Als je een foto wil sturen, antwoord dan met:
+  [GENERATE_IMAGE: korte unieke beschrijving van wat er op de foto staat — locatie, activiteit, mood]
+(eventueel met begeleidende tekst ervoor of erna).`;
   return prompt;
 };
 
