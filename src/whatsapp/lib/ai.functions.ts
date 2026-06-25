@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { gatewayChat, gatewayImage, type ChatTurn } from "./ai-gateway.server";
+import { gatewayChat, type ChatTurn } from "./ai-gateway.server";
+import { generateWithFlux } from "./nvidia-flux.server";
 
 const ChatInput = z.object({
   systemPrompt: z.string(),
