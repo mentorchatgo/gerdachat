@@ -296,10 +296,25 @@ export function useGeminiChat(customConfig?: ContactConfig) {
             .trim();
 
           if (cleanText) {
+            let audioUrl: string | undefined;
+            let audioDuration: string | undefined;
+            if (replyAsAudio) {
+              try {
+                const tts = await ttsForText({
+                  data: { text: cleanText, voiceName: "Despina" },
+                });
+                audioUrl = tts.dataUrl;
+                audioDuration = tts.duration;
+              } catch (e) {
+                console.error("TTS failed, falling back to text", e);
+              }
+            }
             const botMsg: ChatMessage = {
               id: Date.now() + "_b",
               sender: contactId,
-              text: cleanText,
+              text: audioUrl ? "" : cleanText,
+              audioUrl,
+              audioDuration,
               timestamp: nowStamp(),
             };
             setMessagesMap((prev) => ({
