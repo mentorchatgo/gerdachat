@@ -33,3 +33,9 @@ export const generateContactImage = createServerFn({ method: "POST" })
     const dataUrl = await gatewayImage(data.prompt);
     return { dataUrl };
   });
+
+export const getLiveApiKey = createServerFn({ method: "GET" }).handler(async () => {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error("GEMINI_API_KEY ontbreekt");
+  return { key };
+});

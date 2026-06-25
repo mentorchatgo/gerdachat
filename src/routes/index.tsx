@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect } from "react";
-import App from "../whatsapp/App";
+import { useEffect, useState, lazy, Suspense } from "react";
 import "../whatsapp/whatsapp.css";
 
+const App = lazy(() => import("../whatsapp/App"));
+
 export const Route = createFileRoute("/")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "WhatsApp — Gerda" },
@@ -22,11 +24,18 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const [mounted, setMounted] = useState(false);
   useEffect(() => {
+    setMounted(true);
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = "";
     };
   }, []);
-  return <App />;
+  if (!mounted) return null;
+  return (
+    <Suspense fallback={null}>
+      <App />
+    </Suspense>
+  );
 }
