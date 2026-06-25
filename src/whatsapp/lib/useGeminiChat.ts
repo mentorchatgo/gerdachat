@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { get, set } from "idb-keyval";
 import { MemoryService } from "./memoryService";
-import { chatTurn, generateContactImage } from "./ai.functions";
+import { chatTurn, generateContactImage, ttsForText } from "./ai.functions";
 
 export interface ChatMessage {
   id: string;
@@ -185,7 +185,7 @@ export function useGeminiChat(customConfig?: ContactConfig) {
   }, [messagesMap, hasLoadedMessages]);
 
   const initializedRef = useRef<Record<string, boolean>>({});
-  const queueRef = useRef<Record<string, string[]>>({});
+  const queueRef = useRef<Record<string, Array<{ text: string; isAudio: boolean }>>>({});
   const processingRef = useRef<Record<string, boolean>>({});
 
   const initChat = useCallback((contactId: ContactId) => {
@@ -233,7 +233,9 @@ export function useGeminiChat(customConfig?: ContactConfig) {
       processingRef.current[contactId] = true;
       try {
         while (queueRef.current[contactId]?.length) {
-          const userText = queueRef.current[contactId].shift()!;
+          const item = queueRef.current[contactId].shift()!;
+          const userText = item.text;
+          const replyAsAudio = item.isAudio;
           await new Promise((r) => setTimeout(r, 800));
           setIsTypingMap((p) => ({ ...p, [contactId]: true }));
 
@@ -294,10 +296,25 @@ export function useGeminiChat(customConfig?: ContactConfig) {
             .trim();
 
           if (cleanText) {
+            let audioUrl: string | undefined;
+            let audioDuration: string | undefined;
+            if (replyAsAudio) {
+              try {
+                const tts = await ttsForText({
+                  data: { text: cleanText, voiceName: "Despina" },
+                });
+                audioUrl = tts.dataUrl;
+                audioDuration = tts.duration;
+              } catch (e) {
+                console.error("TTS failed, falling back to text", e);
+              }
+            }
             const botMsg: ChatMessage = {
               id: Date.now() + "_b",
               sender: contactId,
-              text: cleanText,
+              text: audioUrl ? "" : cleanText,
+              audioUrl,
+              audioDuration,
               timestamp: nowStamp(),
             };
             setMessagesMap((prev) => ({
@@ -402,12 +419,12 @@ export function useGeminiChat(customConfig?: ContactConfig) {
       }));
 
       if (!queueRef.current[contactId]) queueRef.current[contactId] = [];
-      const queueText = audioData
-        ? "(spraakbericht ontvangen — antwoord kort in tekst)"
+     const queueText = audioData
+        ? "(De gebruiker heeft een spraakbericht gestuurd. Antwoord kort en natuurlijk in spreektaal, zoals je normaal zou doen.)"
         : imageData
         ? `${text}\n[de gebruiker heeft een afbeelding meegestuurd]`
         : text;
-      queueRef.current[contactId].push(queueText);
+      queueRef.current[contactId].push({ text: queueText, isAudio: !!audioData });
       processQueue(contactId);
     },
     [initChat, processQueue],

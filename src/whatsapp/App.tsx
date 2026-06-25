@@ -2257,7 +2257,7 @@ export default function App() {
 
         {/* Contact Profile Sidebar */}
         {showContactProfile && (
-          <div className="w-full md:w-[380px] h-full bg-[#111b21] border-l border-[var(--color-wa-border)] flex flex-col relative z-50 animate-in slide-in-from-right duration-300">
+          <div className="absolute inset-0 md:static md:inset-auto w-full md:w-[380px] h-full bg-[#111b21] border-l border-[var(--color-wa-border)] flex flex-col z-[150] animate-in slide-in-from-right duration-300">
              {/* Header */}
              <div className="h-[60px] bg-[#202c33] flex items-center px-4 gap-4 shrink-0 text-[#e9edef] border-b border-[#222e35]">
                 <button 
