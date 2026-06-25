@@ -419,12 +419,12 @@ export function useGeminiChat(customConfig?: ContactConfig) {
       }));
 
       if (!queueRef.current[contactId]) queueRef.current[contactId] = [];
-      const queueText = audioData
-        ? "(spraakbericht ontvangen — antwoord kort in tekst)"
+     const queueText = audioData
+        ? "(De gebruiker heeft een spraakbericht gestuurd. Antwoord kort en natuurlijk in spreektaal, zoals je normaal zou doen.)"
         : imageData
         ? `${text}\n[de gebruiker heeft een afbeelding meegestuurd]`
         : text;
-      queueRef.current[contactId].push(queueText);
+      queueRef.current[contactId].push({ text: queueText, isAudio: !!audioData });
       processQueue(contactId);
     },
     [initChat, processQueue],
