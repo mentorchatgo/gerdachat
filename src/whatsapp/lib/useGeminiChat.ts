@@ -185,7 +185,7 @@ export function useGeminiChat(customConfig?: ContactConfig) {
   }, [messagesMap, hasLoadedMessages]);
 
   const initializedRef = useRef<Record<string, boolean>>({});
-  const queueRef = useRef<Record<string, string[]>>({});
+  const queueRef = useRef<Record<string, Array<{ text: string; isAudio: boolean }>>>({});
   const processingRef = useRef<Record<string, boolean>>({});
 
   const initChat = useCallback((contactId: ContactId) => {
@@ -233,7 +233,9 @@ export function useGeminiChat(customConfig?: ContactConfig) {
       processingRef.current[contactId] = true;
       try {
         while (queueRef.current[contactId]?.length) {
-          const userText = queueRef.current[contactId].shift()!;
+          const item = queueRef.current[contactId].shift()!;
+          const userText = item.text;
+          const replyAsAudio = item.isAudio;
           await new Promise((r) => setTimeout(r, 800));
           setIsTypingMap((p) => ({ ...p, [contactId]: true }));
 
