@@ -107,9 +107,11 @@ const getCustomSystemPrompt = (sysInstruct: string, voicePrompt?: string) => {
   if (voicePrompt) {
     prompt += `\n\nStemstijl: ${voicePrompt}`;
   }
-  prompt += `\n\nAls de gebruiker om een foto of selfie vraagt, antwoord dan met:
-  [GENERATE_IMAGE: korte beschrijving van wat er op de foto staat]
-(eventueel met begeleidende tekst).`;
+  prompt += `\n\nFOTO-GEDRAG: Wees PROACTIEF met foto's sturen. Stuur regelmatig uit jezelf een foto (ongeveer elke 3-5 berichten als het in de context past), ook zonder dat erom gevraagd wordt — bijvoorbeeld wat je nu eet, waar je bent, wat je doet, een rare selfie, etc. Varieer ELKE keer het onderwerp en de situatie zodat het nooit dezelfde foto wordt.
+
+Als je een foto wil sturen, antwoord dan met:
+  [GENERATE_IMAGE: korte unieke beschrijving van wat er op de foto staat — locatie, activiteit, mood]
+(eventueel met begeleidende tekst ervoor of erna).`;
   return prompt;
 };
 
@@ -319,10 +321,22 @@ export function useGeminiChat(customConfig?: ContactConfig) {
             }));
           } else if (genMatch) {
             try {
+              const variations = [
+                "shot from slightly above, soft window light",
+                "low-angle phone selfie, warm indoor lighting",
+                "mirror selfie, harsh flash, motion blur",
+                "extreme close-up, fish-eye distortion, fluorescent light",
+                "wide shot in a kitchen, daylight, slightly out of focus",
+                "blurry walking selfie, evening street lights",
+                "candid shot from the side, no eye contact, soft shadows",
+                "overexposed selfie, bright sunlight outdoors",
+              ];
+              const variation =
+                variations[Math.floor(Math.random() * variations.length)];
               const styleHint =
                 contactId === "gerda"
-                  ? "Realistic blurry phone selfie, 45-year-old extremely overweight bald woman with messy look, double chin, vertical 9:16 framing, amateur lighting."
-                  : "Realistic casual amateur selfie, vertical 9:16 format, realistic lighting and shadows, high photo detail.";
+                  ? `Realistic amateur phone photo of an extremely morbidly obese middle-aged Dutch woman with a huge double chin, many fat rolls, messy hair, ${variation}, vertical 9:16 framing, authentic imperfect smartphone quality, not a studio photo.`
+                  : `Realistic casual amateur smartphone photo, ${variation}, vertical 9:16, authentic imperfect quality.`;
               const fullPrompt = `${genMatch[1].trim()}. ${styleHint}`;
               const imgRes = await generateContactImage({
                 data: { prompt: fullPrompt },

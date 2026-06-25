@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { gatewayChat, gatewayImage, type ChatTurn } from "./ai-gateway.server";
+import { gatewayChat, type ChatTurn } from "./ai-gateway.server";
+import { generateWithFlux } from "./nvidia-flux.server";
 
 const ChatInput = z.object({
   systemPrompt: z.string(),
@@ -30,7 +31,7 @@ const ImageInput = z.object({ prompt: z.string().min(1) });
 export const generateContactImage = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => ImageInput.parse(d))
   .handler(async ({ data }) => {
-    const dataUrl = await gatewayImage(data.prompt);
+    const dataUrl = await generateWithFlux(data.prompt);
     return { dataUrl };
   });
 
