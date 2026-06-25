@@ -31,7 +31,7 @@ const ImageInput = z.object({ prompt: z.string().min(1) });
 export const generateContactImage = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => ImageInput.parse(d))
   .handler(async ({ data }) => {
-    const dataUrl = await gatewayImage(data.prompt);
+    const dataUrl = await generateWithFlux(data.prompt);
     return { dataUrl };
   });
 
