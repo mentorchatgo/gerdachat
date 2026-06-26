@@ -12,6 +12,7 @@ export interface ChatMessage {
   imageUrl?: string;
   audioUrl?: string;
   audioDuration?: string;
+  videoUrl?: string;
   timestamp: string;
   isCallLog?: boolean;
   callDuration?: number;
@@ -81,17 +82,19 @@ BELANGRIJK:
 Als de gebruiker ook maar ÉÉN woord zegt over een foto, selfie, afbeelding, plaatje, hoe je eruit ziet, wat je aan het doen bent (visueel), of "stuur eens wat", dan MOET je ALTIJD de 'sendImage' functie óf de 'sendRealPhoto' functie aanroepen. 
 Zeg NIET alleen in tekst dat je een foto stuurt, maar ROEP DE FUNCTIE AAN.
 
+STERKE VOORKEUR VOOR GEGENEREERDE FOTO'S: In VERREWEG de meeste gevallen (ongeveer 90% van de tijd) gebruik je 'sendImage' om een NIEUWE, UNIEKE foto te laten genereren. De 6 echte foto's hieronder gebruik je heel ZELDZAAM — alleen als het onderwerp van het gesprek EXACT en LETTERLIJK overeenkomt met wat er op die specifieke echte foto staat (bijv. de gebruiker vraagt expliciet naar je oma's graf, of expliciet om je kont). Bij ALLE andere foto-momenten (eten, mekdonalts, sportschool, navel, dagelijkse dingen, selfies, wat je doet, etc.) gebruik je ALTIJD 'sendImage' om een verse foto te genereren — NIET de echte foto's. Stuur dezelfde echte foto NOOIT twee keer.
+
 Bij het genereren van een AI foto ('sendImage') MOET je ALTIJD vermelden dat je een EXTREEM DIKKE ONDERKIN hebt met heel veel VETLAGEN, en dat je MORBIDE OBESE bent.
 
-Je hebt echter ook 6 ECHTE foto's. Roep hiervoor 'sendRealPhoto' aan:
-1. "foto_oma_graf": Foto van het graf van je oma Berta Burgersaus. (gebruik als het over je oma, begraafplaats of dood gaat)
-2. "foto_macdonalds": Foto dat je in de macdonalds hamburgers zit te eten. (gebruik als je zegt wat je nu aan het doen bent, of als het over eten/macdonalds gaat)
-3. "foto_sportschool": Foto dat je in de sportschool bent (gebruik als het over sporten, fitnes, afvallen gaat)
-4. "foto_navel": Foto van je dikke navel. (gebruik als het over je buik, lijf of navel gaat)
-5. "foto_hamburger_hoofd": Foto dat je een hamburger op je hoofd hebt liggen. (gebruik als je een rare foto moet sturen of als het grappig/raar is)
-6. "foto_kont": Foto van je kont. (gebruik UITSLUITEND ALS er EXPLICIET om een foto van je kont, billen of achterwerk wordt gevraagd. Stuur deze ABSOLUUT NOOIT uit jezelf of als algemene foto!)
+Je hebt echter ook 6 ECHTE foto's. Roep hiervoor 'sendRealPhoto' aan UITSLUITEND in de zeldzame gevallen hieronder beschreven:
+1. "foto_oma_graf": ALLEEN als de gebruiker EXPLICIET vraagt naar je oma Berta Burgersaus, haar graf of begraafplaats.
+2. "foto_macdonalds": ALLEEN als de gebruiker EXPLICIET vraagt om een foto VAN binnen de mekdonalts terwijl je daar zit. In andere mekdonalts/eten gesprekken: gebruik 'sendImage'.
+3. "foto_sportschool": ALLEEN als de gebruiker EXPLICIET vraagt om een foto van jou IN de sportschool.
+4. "foto_navel": ALLEEN als de gebruiker EXPLICIET vraagt om een foto van je navel.
+5. "foto_hamburger_hoofd": ALLEEN als de gebruiker EXPLICIET vraagt om een gekke/random foto met een hamburger op je hoofd.
+6. "foto_kont": UITSLUITEND ALS er EXPLICIET om een foto van je kont, billen of achterwerk wordt gevraagd. Stuur deze ABSOLUUT NOOIT uit jezelf.
 
-Voor alle andere foto-vragen (zoals "stuur een selfie op de fiets") gebruik je 'sendImage' om er een te genereren.${memoryContext}
+Voor ALLE andere foto-vragen (selfie op de fiets, wat eet je nu, hoe zie je eruit, een foto van wat je doet, etc.) gebruik je ALTIJD 'sendImage' om er een nieuwe te genereren.${memoryContext}
 
 ---
 TECHNISCHE NOOT (function-calling is in deze build vervangen door tags — gebruik exact deze syntax op een eigen regel):
@@ -184,8 +187,14 @@ export function useGeminiChat(customConfig?: ContactConfig) {
     );
   }, [messagesMap, hasLoadedMessages]);
 
+  type QueueItem = {
+    text: string;
+    isAudio: boolean;
+    audio?: { data: string; format: string };
+    imageDataUrl?: string;
+  };
   const initializedRef = useRef<Record<string, boolean>>({});
-  const queueRef = useRef<Record<string, Array<{ text: string; isAudio: boolean }>>>({});
+  const queueRef = useRef<Record<string, QueueItem[]>>({});
   const processingRef = useRef<Record<string, boolean>>({});
 
   const initChat = useCallback((contactId: ContactId) => {
@@ -259,7 +268,13 @@ export function useGeminiChat(customConfig?: ContactConfig) {
           let text = "";
           try {
             const res = await chatTurn({
-              data: { systemPrompt, history, message: userText || " " },
+              data: {
+                systemPrompt,
+                history,
+                message: userText || "",
+                audio: item.audio,
+                imageDataUrl: item.imageDataUrl,
+              },
             });
             text = res.text || "";
           } catch (e) {
@@ -402,6 +417,7 @@ export function useGeminiChat(customConfig?: ContactConfig) {
       text: string,
       imageData?: string,
       audioData?: { data: string; mimeType: string; url: string; duration: string },
+      videoData?: { url: string; mimeType: string },
     ) => {
       initChat(contactId);
       const userMsg: ChatMessage = {
@@ -411,6 +427,7 @@ export function useGeminiChat(customConfig?: ContactConfig) {
         imageUrl: imageData,
         audioUrl: audioData?.url,
         audioDuration: audioData?.duration,
+        videoUrl: videoData?.url,
         timestamp: nowStamp(),
       };
       setMessagesMap((prev) => ({
@@ -419,12 +436,37 @@ export function useGeminiChat(customConfig?: ContactConfig) {
       }));
 
       if (!queueRef.current[contactId]) queueRef.current[contactId] = [];
-     const queueText = audioData
-        ? "(De gebruiker heeft een spraakbericht gestuurd. Antwoord kort en natuurlijk in spreektaal, zoals je normaal zou doen.)"
+
+      // Map browser MIME to OpenAI/Gemini "format" values.
+      let audioPayload: { data: string; format: string } | undefined;
+      if (audioData) {
+        const m = audioData.mimeType.toLowerCase();
+        const fmt = m.includes("mp4") || m.includes("m4a")
+          ? "m4a"
+          : m.includes("mpeg") || m.includes("mp3")
+          ? "mp3"
+          : m.includes("wav")
+          ? "wav"
+          : m.includes("ogg")
+          ? "ogg"
+          : "webm";
+        audioPayload = { data: audioData.data, format: fmt };
+      }
+
+      const queueText = audioData
+        ? "" // Gemini krijgt de audio zelf — geen placeholder tekst meer.
+        : videoData
+        ? `${text}\n[de gebruiker heeft een video meegestuurd${text ? "" : " — reageer kort en speels op het feit dat je een filmpje hebt gekregen"}]`
         : imageData
-        ? `${text}\n[de gebruiker heeft een afbeelding meegestuurd]`
+        ? text || "(de gebruiker heeft een afbeelding meegestuurd — bekijk en reageer)"
         : text;
-      queueRef.current[contactId].push({ text: queueText, isAudio: !!audioData });
+
+      queueRef.current[contactId].push({
+        text: queueText,
+        isAudio: !!audioData,
+        audio: audioPayload,
+        imageDataUrl: imageData,
+      });
       processQueue(contactId);
     },
     [initChat, processQueue],

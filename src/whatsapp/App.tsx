@@ -352,7 +352,7 @@ export default function App() {
   const activeName = activeContact !== 'gerda' ? (activeContactConfig.name || "Aangepast contact") : 'Gerda';
   const activeAvatar = activeContact !== 'gerda' ? activeContactConfig.profilePic : GERDA_AVATAR;
   const activePhone = activeContact !== 'gerda' ? (activeContactConfig.phoneNumber || "Onbekend nummer") : '020-2254002';
-  const activeBio = activeContact !== 'gerda' ? (activeContactConfig.bio || "Hoi! Ik gebruik WhatsApp.") : 'Leker in de mekdonalts 🍔 met loeks pasje';
+  const activeBio = activeContact !== 'gerda' ? (activeContactConfig.bio || "Hoi! Ik gebruik WhatsApp.") : "Leker in de mekdonalts 🍔 met brendi's pasje";
   
   const activeOverlay = GERDA_OVERLAY;
   const activeVideo = GERDA_VIDEO;
@@ -382,6 +382,7 @@ export default function App() {
   
   const [viewImageUrl, setViewImageUrl] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<string | null>(null);
+  const [pendingVideo, setPendingVideo] = useState<{ url: string; mimeType: string } | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
@@ -646,10 +647,10 @@ export default function App() {
 
   const handleSend = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!inputText.trim() && !pendingImage) return;
+    if (!inputText.trim() && !pendingImage && !pendingVideo) return;
     
     // Add msg to standard chat history always
-    sendMessage(activeContact, inputText, pendingImage || undefined);
+    sendMessage(activeContact, inputText, pendingImage || undefined, undefined, pendingVideo || undefined);
     
     // If we're calling, also send this to Live API to read and reply by voice
     if (callState === 'connected') {
@@ -658,17 +659,23 @@ export default function App() {
     
     setInputText('');
     setPendingImage(null);
+    setPendingVideo(null);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-              const base64 = event.target?.result as string;
-              setPendingImage(base64);
-          };
-          reader.readAsDataURL(file);
+          if (file.type.startsWith('video/')) {
+              const url = URL.createObjectURL(file);
+              setPendingVideo({ url, mimeType: file.type });
+          } else {
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                  const base64 = event.target?.result as string;
+                  setPendingImage(base64);
+              };
+              reader.readAsDataURL(file);
+          }
       }
       if (e.target) e.target.value = '';
   };
@@ -1897,7 +1904,7 @@ export default function App() {
                   </div>
                   <div>
                     <label className="block text-[#8696a0] text-sm mb-2">Info / Status (Bio)</label>
-                    <input type="text" value={activeContactConfig.bio || ''} onChange={(e) => updateCustomContact(activeContact, { bio: e.target.value })} className="w-full bg-[#2a3942] rounded-lg px-4 py-3 outline-none focus:ring-1 focus:ring-[#00a884] text-[#e9edef]" placeholder="Bijv.: Leker in de mekdonalts 🍔 met loeks pasje" />
+                    <input type="text" value={activeContactConfig.bio || ''} onChange={(e) => updateCustomContact(activeContact, { bio: e.target.value })} className="w-full bg-[#2a3942] rounded-lg px-4 py-3 outline-none focus:ring-1 focus:ring-[#00a884] text-[#e9edef]" placeholder="Bijv.: Leker in de mekdonalts 🍔 met brendi's pasje" />
                  </div>
                  <div>
                    <label className="block text-[#8696a0] text-sm mb-2">Systeem Instructie (Karakter, Gedrag, Stem)</label>
@@ -2031,6 +2038,11 @@ export default function App() {
                           <img src={msg.imageUrl} alt="chat attachment" className="rounded-lg max-h-72 object-cover" />
                         </div>
                       )}
+                      {msg.videoUrl && (
+                        <div className="mb-1">
+                          <video src={msg.videoUrl} controls playsInline className="rounded-lg max-h-72 max-w-full bg-black" />
+                        </div>
+                      )}
                       {msg.audioUrl && (
                         <AudioMessagePlayer 
                           avatar={isMe ? meAvatar : activeAvatar} 
@@ -2110,13 +2122,19 @@ export default function App() {
 
         {/* Input Area */}
         <div className="bg-transparent px-3 pb-4 pt-1 flex items-end gap-2 relative z-10 w-full shrink-0 mt-auto min-h-[62px]">
-          <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+          <input type="file" ref={fileInputRef} className="hidden" accept="image/*,video/*" onChange={handleFileChange} />
           
           <div className="flex flex-col w-full relative">
             {pendingImage && (
                 <div className="mb-2 ml-2 relative w-20 h-20 bg-[#202c33] p-1.5 rounded-lg border border-white/10 shadow-lg">
                     <img src={pendingImage} className="w-full h-full object-cover rounded" />
                     <button onClick={() => setPendingImage(null)} className="absolute -top-1.5 -right-1.5 bg-[#00a884] rounded-full p-0.5 text-white text-xs w-5 h-5 flex items-center justify-center font-bold">✕</button>
+                </div>
+            )}
+            {pendingVideo && (
+                <div className="mb-2 ml-2 relative w-28 h-20 bg-[#202c33] p-1.5 rounded-lg border border-white/10 shadow-lg">
+                    <video src={pendingVideo.url} className="w-full h-full object-cover rounded" muted />
+                    <button onClick={() => { URL.revokeObjectURL(pendingVideo.url); setPendingVideo(null); }} className="absolute -top-1.5 -right-1.5 bg-[#00a884] rounded-full p-0.5 text-white text-xs w-5 h-5 flex items-center justify-center font-bold">✕</button>
                 </div>
             )}
             <div className="flex items-end gap-2 w-full">

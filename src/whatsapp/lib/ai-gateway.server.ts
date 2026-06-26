@@ -12,7 +12,15 @@ function authHeaders() {
   };
 }
 
-export type ChatTurn = { role: "system" | "user" | "assistant"; content: string };
+export type ChatContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } }
+  | { type: "input_audio"; input_audio: { data: string; format: string } };
+
+export type ChatTurn = {
+  role: "system" | "user" | "assistant";
+  content: string | ChatContentPart[];
+};
 
 export async function gatewayChat(messages: ChatTurn[], model = "google/gemini-3-flash-preview"): Promise<string> {
   const res = await fetch(`${BASE}/chat/completions`, {
