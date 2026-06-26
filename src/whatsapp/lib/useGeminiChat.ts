@@ -12,6 +12,7 @@ export interface ChatMessage {
   imageUrl?: string;
   audioUrl?: string;
   audioDuration?: string;
+  videoUrl?: string;
   timestamp: string;
   isCallLog?: boolean;
   callDuration?: number;
