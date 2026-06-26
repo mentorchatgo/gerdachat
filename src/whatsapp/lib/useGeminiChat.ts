@@ -187,8 +187,14 @@ export function useGeminiChat(customConfig?: ContactConfig) {
     );
   }, [messagesMap, hasLoadedMessages]);
 
+  type QueueItem = {
+    text: string;
+    isAudio: boolean;
+    audio?: { data: string; format: string };
+    imageDataUrl?: string;
+  };
   const initializedRef = useRef<Record<string, boolean>>({});
-  const queueRef = useRef<Record<string, Array<{ text: string; isAudio: boolean }>>>({});
+  const queueRef = useRef<Record<string, QueueItem[]>>({});
   const processingRef = useRef<Record<string, boolean>>({});
 
   const initChat = useCallback((contactId: ContactId) => {
