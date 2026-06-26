@@ -647,10 +647,10 @@ export default function App() {
 
   const handleSend = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!inputText.trim() && !pendingImage) return;
+    if (!inputText.trim() && !pendingImage && !pendingVideo) return;
     
     // Add msg to standard chat history always
-    sendMessage(activeContact, inputText, pendingImage || undefined);
+    sendMessage(activeContact, inputText, pendingImage || undefined, undefined, pendingVideo || undefined);
     
     // If we're calling, also send this to Live API to read and reply by voice
     if (callState === 'connected') {
@@ -659,17 +659,23 @@ export default function App() {
     
     setInputText('');
     setPendingImage(null);
+    setPendingVideo(null);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-              const base64 = event.target?.result as string;
-              setPendingImage(base64);
-          };
-          reader.readAsDataURL(file);
+          if (file.type.startsWith('video/')) {
+              const url = URL.createObjectURL(file);
+              setPendingVideo({ url, mimeType: file.type });
+          } else {
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                  const base64 = event.target?.result as string;
+                  setPendingImage(base64);
+              };
+              reader.readAsDataURL(file);
+          }
       }
       if (e.target) e.target.value = '';
   };
