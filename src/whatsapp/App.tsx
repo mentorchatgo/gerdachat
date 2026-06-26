@@ -352,7 +352,7 @@ export default function App() {
   const activeName = activeContact !== 'gerda' ? (activeContactConfig.name || "Aangepast contact") : 'Gerda';
   const activeAvatar = activeContact !== 'gerda' ? activeContactConfig.profilePic : GERDA_AVATAR;
   const activePhone = activeContact !== 'gerda' ? (activeContactConfig.phoneNumber || "Onbekend nummer") : '020-2254002';
-  const activeBio = activeContact !== 'gerda' ? (activeContactConfig.bio || "Hoi! Ik gebruik WhatsApp.") : 'Leker in de mekdonalts 🍔 met loeks pasje';
+  const activeBio = activeContact !== 'gerda' ? (activeContactConfig.bio || "Hoi! Ik gebruik WhatsApp.") : "Leker in de mekdonalts 🍔 met brendi's pasje";
   
   const activeOverlay = GERDA_OVERLAY;
   const activeVideo = GERDA_VIDEO;
