@@ -17,15 +17,51 @@ const ChatInput = z.object({
     }),
   ),
   message: z.string(),
+  audio: z
+    .object({
+      data: z.string(), // base64 (no data URL prefix)
+      format: z.string(), // "webm" | "mp4" | "wav" | "mp3" | ...
+    })
+    .optional(),
+  imageDataUrl: z.string().optional(),
 });
 
 export const chatTurn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => ChatInput.parse(d))
   .handler(async ({ data }) => {
+    // Build the latest user turn. If we have audio or an image, send a
+    // multimodal content array so Gemini actually understands the input.
+    let latest: ChatTurn;
+    if (data.audio || data.imageDataUrl) {
+      const parts: any[] = [];
+      if (data.message && data.message.trim()) {
+        parts.push({ type: "text", text: data.message });
+      } else if (data.audio) {
+        parts.push({
+          type: "text",
+          text: "(Spraakbericht van de gebruiker — luister naar de audio hieronder en reageer kort en natuurlijk in spreektaal alsof je het gewoon hebt gehoord.)",
+        });
+      } else {
+        parts.push({ type: "text", text: "(Bekijk de meegestuurde afbeelding en reageer.)" });
+      }
+      if (data.imageDataUrl) {
+        parts.push({ type: "image_url", image_url: { url: data.imageDataUrl } });
+      }
+      if (data.audio) {
+        parts.push({
+          type: "input_audio",
+          input_audio: { data: data.audio.data, format: data.audio.format },
+        });
+      }
+      latest = { role: "user", content: parts };
+    } else {
+      latest = { role: "user", content: data.message };
+    }
+
     const turns: ChatTurn[] = [
       { role: "system", content: data.systemPrompt },
       ...data.history,
-      { role: "user", content: data.message },
+      latest,
     ];
     const text = await gatewayChat(turns);
     return { text };
