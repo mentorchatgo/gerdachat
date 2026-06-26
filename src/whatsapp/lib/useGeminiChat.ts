@@ -268,7 +268,13 @@ export function useGeminiChat(customConfig?: ContactConfig) {
           let text = "";
           try {
             const res = await chatTurn({
-              data: { systemPrompt, history, message: userText || " " },
+              data: {
+                systemPrompt,
+                history,
+                message: userText || "",
+                audio: item.audio,
+                imageDataUrl: item.imageDataUrl,
+              },
             });
             text = res.text || "";
           } catch (e) {
