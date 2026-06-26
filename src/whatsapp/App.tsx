@@ -382,6 +382,7 @@ export default function App() {
   
   const [viewImageUrl, setViewImageUrl] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<string | null>(null);
+  const [pendingVideo, setPendingVideo] = useState<{ url: string; mimeType: string } | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
