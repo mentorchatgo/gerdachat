@@ -1897,7 +1897,7 @@ export default function App() {
                   </div>
                   <div>
                     <label className="block text-[#8696a0] text-sm mb-2">Info / Status (Bio)</label>
-                    <input type="text" value={activeContactConfig.bio || ''} onChange={(e) => updateCustomContact(activeContact, { bio: e.target.value })} className="w-full bg-[#2a3942] rounded-lg px-4 py-3 outline-none focus:ring-1 focus:ring-[#00a884] text-[#e9edef]" placeholder="Bijv.: Leker in de mekdonalts 🍔 met loeks pasje" />
+                    <input type="text" value={activeContactConfig.bio || ''} onChange={(e) => updateCustomContact(activeContact, { bio: e.target.value })} className="w-full bg-[#2a3942] rounded-lg px-4 py-3 outline-none focus:ring-1 focus:ring-[#00a884] text-[#e9edef]" placeholder="Bijv.: Leker in de mekdonalts 🍔 met brendi's pasje" />
                  </div>
                  <div>
                    <label className="block text-[#8696a0] text-sm mb-2">Systeem Instructie (Karakter, Gedrag, Stem)</label>
