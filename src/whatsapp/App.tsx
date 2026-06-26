@@ -2038,6 +2038,11 @@ export default function App() {
                           <img src={msg.imageUrl} alt="chat attachment" className="rounded-lg max-h-72 object-cover" />
                         </div>
                       )}
+                      {msg.videoUrl && (
+                        <div className="mb-1">
+                          <video src={msg.videoUrl} controls playsInline className="rounded-lg max-h-72 max-w-full bg-black" />
+                        </div>
+                      )}
                       {msg.audioUrl && (
                         <AudioMessagePlayer 
                           avatar={isMe ? meAvatar : activeAvatar} 
