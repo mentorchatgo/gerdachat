@@ -97,7 +97,7 @@ export async function generateWithFlux(prompt: string): Promise<string> {
     prompt: prompt.slice(0, 9500),
     width: 1024,
     height: 1024,
-    cfg_scale: 3.5,
+    cfg_scale: 1,
     samples: 1,
     seed,
     steps: 4,
