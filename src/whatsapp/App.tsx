@@ -2117,7 +2117,7 @@ export default function App() {
 
         {/* Input Area */}
         <div className="bg-transparent px-3 pb-4 pt-1 flex items-end gap-2 relative z-10 w-full shrink-0 mt-auto min-h-[62px]">
-          <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+          <input type="file" ref={fileInputRef} className="hidden" accept="image/*,video/*" onChange={handleFileChange} />
           
           <div className="flex flex-col w-full relative">
             {pendingImage && (
