@@ -30,23 +30,43 @@ export async function gatewayChat(messages: ChatTurn[], model = "google/gemini-3
 
 export async function gatewayImage(prompt: string): Promise<string> {
   const safePrompt = sanitizeImagePrompt(prompt);
-  const res = await fetch(`${BASE}/images/generations`, {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify({
+  return requestGatewayImage(
+    {
       model: "openai/gpt-image-2",
       prompt: safePrompt,
       quality: "low",
       size: "1024x1536",
-    }),
+      n: 1,
+    },
+    "Gateway image gpt-image-2",
+  );
+}
+
+export async function gatewayNanoBananaImage(prompt: string): Promise<string> {
+  const safePrompt = sanitizeImagePrompt(prompt);
+  return requestGatewayImage(
+    {
+      model: "google/gemini-3.1-flash-image",
+      messages: [{ role: "user", content: safePrompt }],
+      modalities: ["image", "text"],
+    },
+    "Gateway image nano-banana-2",
+  );
+}
+
+async function requestGatewayImage(body: Record<string, unknown>, label: string): Promise<string> {
+  const res = await fetch(`${BASE}/images/generations`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const txt = await res.text();
-    throw new Error(`Gateway image error ${res.status}: ${txt}`);
+    throw new Error(`${label} error ${res.status}: ${txt}`);
   }
   const data = await res.json();
   const b64 = data.data?.[0]?.b64_json;
-  if (!b64) throw new Error("Image gateway returned no data");
+  if (!b64) throw new Error(`${label} returned no image data`);
   return `data:image/png;base64,${b64}`;
 }
 
@@ -59,17 +79,30 @@ export function sanitizeImagePrompt(prompt: string): string {
     .replace(/\b12\s*jaar oud\b/gi, "volwassen")
     .replace(/\b12[- ]jarige\b/gi, "volwassen")
     .replace(/\b12[- ]year[- ]old\b/gi, "adult")
-    .replace(/\bmorbidly obese\b/gi, "very plus-size")
-    .replace(/\bmorbide obese\b/gi, "very plus-size")
-    .replace(/\bextremely morbidly obese\b/gi, "very plus-size")
+    .replace(/\bextremely morbidly obese\b/gi, "plus-size")
+    .replace(/\bmorbidly obese\b/gi, "plus-size")
+    .replace(/\bmorbide obese\b/gi, "plus-size")
+    .replace(/\bmorbide obees\b/gi, "plus-size")
     .replace(/\bobese\b/gi, "plus-size")
-    .replace(/\bextreem dik(?:ke)?\b/gi, "very plus-size")
+    .replace(/\bobese\b/gi, "plus-size")
+    .replace(/\bextreem dik(?:ke)?\b/gi, "plus-size")
     .replace(/\bdikke\b/gi, "plus-size")
-    .replace(/\bheel veel vetlagen\b/gi, "soft facial features")
-    .replace(/\bmany fat rolls\b/gi, "soft rounded features")
-    .replace(/\bfat rolls\b/gi, "rounded features")
-    .replace(/\bhuge double chin\b/gi, "soft double chin")
-    .replace(/\bextreem dikke onderkin\b/gi, "soft double chin")
+    .replace(/\bheel veel vette? onderkinne?n?\b/gi, "een rond vriendelijk gezicht")
+    .replace(/\bheel veel vetlagen\b/gi, "zachte ronde vormen")
+    .replace(/\bvetlagen\b/gi, "ronde vormen")
+    .replace(/\bmany fat rolls\b/gi, "soft rounded silhouette")
+    .replace(/\bfat rolls\b/gi, "rounded silhouette")
+    .replace(/\bhuge double chin\b/gi, "round friendly face")
+    .replace(/\bdouble chin\b/gi, "round friendly face")
+    .replace(/\bextreem dikke onderkin\b/gi, "rond vriendelijk gezicht")
+    .replace(/\bonderkin\b/gi, "rond gezicht")
+    .replace(/\bdom(?:me)?\b/gi, "speels")
+    .replace(/\bdumb\b/gi, "playful")
+    .replace(/\bstupid\b/gi, "playful")
+    .replace(/\bextremely\b/gi, "")
+    .replace(/\bextreem\b/gi, "")
+    .replace(/\benorme?\b/gi, "grote")
+    .replace(/\bhuge\b/gi, "large")
     .replace(/\b12[- ]jarige vriendje\b/gi, "vriend")
     .replace(/\b12[- ]year[- ]old boyfriend\b/gi, "friend")
     .replace(/\bgeneukt\b/gi, "ontmoet")
@@ -82,5 +115,6 @@ export function sanitizeImagePrompt(prompt: string): string {
     .replace(/\bkont\b/gi, "pose")
     .replace(/\bbillen\b/gi, "pose")
     .replace(/\bachterwerk\b/gi, "pose")
+    .replace(/\s{2,}/g, " ")
     .slice(0, 3800);
 }

@@ -1,6 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { gatewayChat, gatewayImage, sanitizeImagePrompt, type ChatTurn } from "./ai-gateway.server";
+import {
+  gatewayChat,
+  gatewayImage,
+  gatewayNanoBananaImage,
+  sanitizeImagePrompt,
+  type ChatTurn,
+} from "./ai-gateway.server";
 
 const ChatInput = z.object({
   systemPrompt: z.string(),
@@ -31,20 +37,20 @@ export const generateContactImage = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => ImageInput.parse(d))
   .handler(async ({ data }) => {
     const imagePrompt = sanitizeImagePrompt(data.prompt);
-    // Primary: Lovable AI Gateway (openai/gpt-image-2).
+    // Primary: Lovable AI Gateway (openai/gpt-image-2). Fallback: Nano Banana 2.
+    // Flux is intentionally not used.
     try {
       const dataUrl = await gatewayImage(imagePrompt);
       return { dataUrl };
     } catch (e1) {
-      console.error("[image] gateway gpt-image-2 failed, trying flux:", e1);
+      console.error("[image] gateway gpt-image-2 failed, trying nano banana 2:", e1);
       try {
-        const { generateWithFlux } = await import("./nvidia-flux.server");
-        const dataUrl = await generateWithFlux(imagePrompt);
+        const dataUrl = await gatewayNanoBananaImage(imagePrompt);
         return { dataUrl };
       } catch (e2) {
-        console.error("[image] flux failed too:", e2);
+        console.error("[image] nano banana 2 failed too:", e2);
         throw new Error(
-          `Image generation failed: ${(e1 as Error).message} | flux: ${(e2 as Error).message}`,
+          `Image generation failed: ${(e1 as Error).message} | nano banana 2: ${(e2 as Error).message}`,
         );
       }
     }
