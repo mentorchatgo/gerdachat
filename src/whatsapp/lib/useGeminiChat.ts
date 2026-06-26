@@ -352,7 +352,7 @@ export function useGeminiChat(customConfig?: ContactConfig) {
                 variations[Math.floor(Math.random() * variations.length)];
               const styleHint =
                 contactId === "gerda"
-                  ? `Realistic amateur phone photo of a fictional plus-size middle-aged Dutch woman with a round friendly face, messy hair, ${variation}, vertical 9:16 framing, authentic imperfect smartphone quality, warm non-mocking everyday candid photo, no minors, no explicit or sexual content, not a studio photo.`
+                  ? `Realistic amateur phone photo of an extremely morbidly obese middle-aged Dutch woman with a huge double chin, many fat rolls, messy hair, ${variation}, vertical 9:16 framing, authentic imperfect smartphone quality, not a studio photo.`
                   : `Realistic casual amateur smartphone photo, ${variation}, vertical 9:16, authentic imperfect quality.`;
               const fullPrompt = `${genMatch[1].trim()}. ${styleHint}`;
               const imgRes = await generateContactImage({
