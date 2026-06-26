@@ -29,13 +29,12 @@ export async function gatewayChat(messages: ChatTurn[], model = "google/gemini-3
 }
 
 export async function gatewayImage(prompt: string): Promise<string> {
-  const safePrompt = sanitizeImagePrompt(prompt);
   const res = await fetch(`${BASE}/images/generations`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify({
       model: "openai/gpt-image-2",
-      prompt: safePrompt,
+      prompt,
       quality: "low",
       size: "1024x1536",
     }),
@@ -48,39 +47,4 @@ export async function gatewayImage(prompt: string): Promise<string> {
   const b64 = data.data?.[0]?.b64_json;
   if (!b64) throw new Error("Image gateway returned no data");
   return `data:image/png;base64,${b64}`;
-}
-
-export function sanitizeImagePrompt(prompt: string): string {
-  return prompt
-    .replace(/\bBrendi Boterpak\b/gi, "een volwassen vriend")
-    .replace(/\bBrendi\b/gi, "een volwassen vriend")
-    .replace(/\bLoek Ezendam\b/gi, "een volwassen vriend")
-    .replace(/\bLoek\b/gi, "een volwassen vriend")
-    .replace(/\b12\s*jaar oud\b/gi, "volwassen")
-    .replace(/\b12[- ]jarige\b/gi, "volwassen")
-    .replace(/\b12[- ]year[- ]old\b/gi, "adult")
-    .replace(/\bmorbidly obese\b/gi, "very plus-size")
-    .replace(/\bmorbide obese\b/gi, "very plus-size")
-    .replace(/\bextremely morbidly obese\b/gi, "very plus-size")
-    .replace(/\bobese\b/gi, "plus-size")
-    .replace(/\bextreem dik(?:ke)?\b/gi, "very plus-size")
-    .replace(/\bdikke\b/gi, "plus-size")
-    .replace(/\bheel veel vetlagen\b/gi, "soft facial features")
-    .replace(/\bmany fat rolls\b/gi, "soft rounded features")
-    .replace(/\bfat rolls\b/gi, "rounded features")
-    .replace(/\bhuge double chin\b/gi, "soft double chin")
-    .replace(/\bextreem dikke onderkin\b/gi, "soft double chin")
-    .replace(/\b12[- ]jarige vriendje\b/gi, "vriend")
-    .replace(/\b12[- ]year[- ]old boyfriend\b/gi, "friend")
-    .replace(/\bgeneukt\b/gi, "ontmoet")
-    .replace(/\bsex\b/gi, "conversation")
-    .replace(/\bseks\b/gi, "gesprek")
-    .replace(/\bhomo\b/gi, "vriendelijk")
-    .replace(/\bgay\b/gi, "friendly")
-    .replace(/\bballen\b/gi, "grappige details")
-    .replace(/\bpieleke\b/gi, "grappig detail")
-    .replace(/\bkont\b/gi, "pose")
-    .replace(/\bbillen\b/gi, "pose")
-    .replace(/\bachterwerk\b/gi, "pose")
-    .slice(0, 3800);
 }

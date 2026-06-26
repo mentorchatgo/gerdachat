@@ -94,10 +94,11 @@ export async function generateWithFlux(prompt: string): Promise<string> {
   // FLUX.2-klein supports multi-reference editing. NVCF passes the uploaded
   // assets via the header; the inference body references the primary asset.
   const body = {
+    mode: "Image Editing",
     prompt: prompt.slice(0, 9500),
     width: 1024,
     height: 1024,
-    cfg_scale: 1,
+    cfg_scale: 0,
     samples: 1,
     seed,
     steps: 4,
