@@ -417,6 +417,7 @@ export function useGeminiChat(customConfig?: ContactConfig) {
       text: string,
       imageData?: string,
       audioData?: { data: string; mimeType: string; url: string; duration: string },
+      videoData?: { url: string; mimeType: string },
     ) => {
       initChat(contactId);
       const userMsg: ChatMessage = {
@@ -426,6 +427,7 @@ export function useGeminiChat(customConfig?: ContactConfig) {
         imageUrl: imageData,
         audioUrl: audioData?.url,
         audioDuration: audioData?.duration,
+        videoUrl: videoData?.url,
         timestamp: nowStamp(),
       };
       setMessagesMap((prev) => ({
@@ -434,12 +436,37 @@ export function useGeminiChat(customConfig?: ContactConfig) {
       }));
 
       if (!queueRef.current[contactId]) queueRef.current[contactId] = [];
-     const queueText = audioData
-        ? "(De gebruiker heeft een spraakbericht gestuurd. Antwoord kort en natuurlijk in spreektaal, zoals je normaal zou doen.)"
+
+      // Map browser MIME to OpenAI/Gemini "format" values.
+      let audioPayload: { data: string; format: string } | undefined;
+      if (audioData) {
+        const m = audioData.mimeType.toLowerCase();
+        const fmt = m.includes("mp4") || m.includes("m4a")
+          ? "m4a"
+          : m.includes("mpeg") || m.includes("mp3")
+          ? "mp3"
+          : m.includes("wav")
+          ? "wav"
+          : m.includes("ogg")
+          ? "ogg"
+          : "webm";
+        audioPayload = { data: audioData.data, format: fmt };
+      }
+
+      const queueText = audioData
+        ? "" // Gemini krijgt de audio zelf — geen placeholder tekst meer.
+        : videoData
+        ? `${text}\n[de gebruiker heeft een video meegestuurd${text ? "" : " — reageer kort en speels op het feit dat je een filmpje hebt gekregen"}]`
         : imageData
-        ? `${text}\n[de gebruiker heeft een afbeelding meegestuurd]`
+        ? text || "(de gebruiker heeft een afbeelding meegestuurd — bekijk en reageer)"
         : text;
-      queueRef.current[contactId].push({ text: queueText, isAudio: !!audioData });
+
+      queueRef.current[contactId].push({
+        text: queueText,
+        isAudio: !!audioData,
+        audio: audioPayload,
+        imageDataUrl: imageData,
+      });
       processQueue(contactId);
     },
     [initChat, processQueue],
