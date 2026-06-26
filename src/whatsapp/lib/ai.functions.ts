@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { gatewayChat, type ChatTurn } from "./ai-gateway.server";
+import { gatewayChat, gatewayImage, type ChatTurn } from "./ai-gateway.server";
 
 const ChatInput = z.object({
   systemPrompt: z.string(),
@@ -30,13 +30,12 @@ const ImageInput = z.object({ prompt: z.string().min(1) });
 export const generateContactImage = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => ImageInput.parse(d))
   .handler(async ({ data }) => {
-    // Primary: Gemini image (reliable, uses GEMINI_API_KEY).
+    // Primary: Lovable AI Gateway (openai/gpt-image-2).
     try {
-      const { generateImageGemini } = await import("./gemini-direct.server");
-      const dataUrl = await generateImageGemini(data.prompt);
+      const dataUrl = await gatewayImage(data.prompt);
       return { dataUrl };
     } catch (e1) {
-      console.error("[image] gemini failed, trying flux:", e1);
+      console.error("[image] gateway gpt-image-2 failed, trying flux:", e1);
       try {
         const { generateWithFlux } = await import("./nvidia-flux.server");
         const dataUrl = await generateWithFlux(data.prompt);
