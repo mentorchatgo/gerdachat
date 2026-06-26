@@ -74,7 +74,7 @@ function pcm16Base64ToWavDataUrl(pcmB64: string, sampleRate = 24000): { dataUrl:
 
 export async function ttsGemini(text: string, voiceName = "Despina"): Promise<{ dataUrl: string; duration: string }> {
   // Try newer TTS models in order.
-  const models = ["gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts"];
+  const models = ["gemini-3.1-flash-tts-preview", "gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts"];
   let lastErr: string | undefined;
   for (const model of models) {
     try {
