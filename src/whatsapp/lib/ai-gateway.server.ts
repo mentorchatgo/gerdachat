@@ -50,12 +50,21 @@ export async function gatewayImage(prompt: string): Promise<string> {
   return `data:image/png;base64,${b64}`;
 }
 
-function sanitizeImagePrompt(prompt: string): string {
+export function sanitizeImagePrompt(prompt: string): string {
   return prompt
+    .replace(/\bBrendi Boterpak\b/gi, "een volwassen vriend")
+    .replace(/\bBrendi\b/gi, "een volwassen vriend")
+    .replace(/\bLoek Ezendam\b/gi, "een volwassen vriend")
+    .replace(/\bLoek\b/gi, "een volwassen vriend")
+    .replace(/\b12\s*jaar oud\b/gi, "volwassen")
+    .replace(/\b12[- ]jarige\b/gi, "volwassen")
+    .replace(/\b12[- ]year[- ]old\b/gi, "adult")
     .replace(/\bmorbidly obese\b/gi, "very plus-size")
     .replace(/\bmorbide obese\b/gi, "very plus-size")
     .replace(/\bextremely morbidly obese\b/gi, "very plus-size")
+    .replace(/\bobese\b/gi, "plus-size")
     .replace(/\bextreem dik(?:ke)?\b/gi, "very plus-size")
+    .replace(/\bdikke\b/gi, "plus-size")
     .replace(/\bheel veel vetlagen\b/gi, "soft facial features")
     .replace(/\bmany fat rolls\b/gi, "soft rounded features")
     .replace(/\bfat rolls\b/gi, "rounded features")
@@ -64,6 +73,12 @@ function sanitizeImagePrompt(prompt: string): string {
     .replace(/\b12[- ]jarige vriendje\b/gi, "vriend")
     .replace(/\b12[- ]year[- ]old boyfriend\b/gi, "friend")
     .replace(/\bgeneukt\b/gi, "ontmoet")
+    .replace(/\bsex\b/gi, "conversation")
+    .replace(/\bseks\b/gi, "gesprek")
+    .replace(/\bhomo\b/gi, "vriendelijk")
+    .replace(/\bgay\b/gi, "friendly")
+    .replace(/\bballen\b/gi, "grappige details")
+    .replace(/\bpieleke\b/gi, "grappig detail")
     .replace(/\bkont\b/gi, "pose")
     .replace(/\bbillen\b/gi, "pose")
     .replace(/\bachterwerk\b/gi, "pose")
