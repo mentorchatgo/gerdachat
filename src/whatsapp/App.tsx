@@ -2126,6 +2126,12 @@ export default function App() {
                     <button onClick={() => setPendingImage(null)} className="absolute -top-1.5 -right-1.5 bg-[#00a884] rounded-full p-0.5 text-white text-xs w-5 h-5 flex items-center justify-center font-bold">✕</button>
                 </div>
             )}
+            {pendingVideo && (
+                <div className="mb-2 ml-2 relative w-28 h-20 bg-[#202c33] p-1.5 rounded-lg border border-white/10 shadow-lg">
+                    <video src={pendingVideo.url} className="w-full h-full object-cover rounded" muted />
+                    <button onClick={() => { URL.revokeObjectURL(pendingVideo.url); setPendingVideo(null); }} className="absolute -top-1.5 -right-1.5 bg-[#00a884] rounded-full p-0.5 text-white text-xs w-5 h-5 flex items-center justify-center font-bold">✕</button>
+                </div>
+            )}
             <div className="flex items-end gap-2 w-full">
               {/* Pill-shaped capsule input container */}
               <div className="flex-1 bg-[#202c33] rounded-[24px] px-3.5 py-1.5 flex items-center gap-2.5 border border-white/5 min-h-[48px] relative shadow-md">
