@@ -8,6 +8,7 @@ import { GoogleGenAI, Modality, LiveServerMessage, Type, FunctionDeclaration } f
 import { float32ToPCM16, pcm16ToBase64, base64ToPcm16, pcm16ToFloat32 } from './audioUtils';
 import { MemoryService } from './memoryService';
 import { getLiveApiKey } from './ai.functions';
+import { getGerdaSystemPrompt } from './useGeminiChat';
 
 const IN_SAMPLE_RATE = 16000;
 const OUT_SAMPLE_RATE = 24000;
@@ -215,7 +216,7 @@ export function useLiveCall(customConfig?: { name: string; sysInstruct: string; 
 
       const sysInstruct = contactId !== 'gerda' && customConfig
         ? `${customConfig.sysInstruct}\n\n${voiceStyleSection}MAAK GEEN SPELLINGSFOUTEN, WANT DIT IS EEN ${callTypeNoun} EN SPELFOUTEN WORDEN VERKEERD UITGESPROKEN.\nREAGEER ALTIJD KORT EN BONDIG. DIT IS EEN ${callTypeNoun}, DUS GEBRUIK ABSOLUUT GEEN EMOJI'S IN JE ANTWOORDEN.${cameraInstruction}\n${memoryContext}`
-        : buildGerdaCallPrompt(callTypeNoun, cameraInstruction, memoryContext, mentorName);
+        : `${getGerdaSystemPrompt()}\n\nDIT IS EEN ${callTypeNoun} (tekst-naar-spraak). MAAK GEEN SPELLINGSFOUTEN want die worden verkeerd uitgesproken. GEBRUIK ABSOLUUT GEEN ENKELE EMOJI.${cameraInstruction}`;
 
       const saveMemoryFunctionDeclaration: FunctionDeclaration = {
         name: 'saveMemory',

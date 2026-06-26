@@ -46,7 +46,7 @@ export async function chooseVoiceAndPrompt(
   };
 }
 
-const getGerdaSystemPrompt = () => {
+export const getGerdaSystemPrompt = () => {
   const mentorName = "Gerda B.";
   const memories = MemoryService.getMemories();
   const memoryContext =
