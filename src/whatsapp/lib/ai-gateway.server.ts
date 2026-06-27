@@ -36,12 +36,18 @@ export async function gatewayChat(messages: ChatTurn[], model = "google/gemini-3
   return data.choices?.[0]?.message?.content ?? "";
 }
 
-export async function gatewayImage(prompt: string): Promise<string> {
+// Vaste referentiefoto voor Gerda — gebruikt om gezicht/uiterlijk consistent te houden.
+export const GERDA_REFERENCE_IMAGE = "https://i.imgur.com/e9o18Au.jpeg";
+
+export async function gatewayImage(prompt: string, referenceUrl?: string): Promise<string> {
   const safePrompt = sanitizeImagePrompt(prompt);
+  const refLine = referenceUrl
+    ? ` The subject's face, hair, body shape and overall look must stay CONSISTENT with the reference character portrait at ${referenceUrl} (same woman, same face, same hairstyle, same body type in every image).`
+    : "";
   return requestGatewayImage(
     {
       model: "openai/gpt-image-2",
-      prompt: safePrompt,
+      prompt: safePrompt + refLine,
       quality: "low",
       size: "1024x1536",
       n: 1,
@@ -50,12 +56,24 @@ export async function gatewayImage(prompt: string): Promise<string> {
   );
 }
 
-export async function gatewayNanoBananaImage(prompt: string): Promise<string> {
+export async function gatewayNanoBananaImage(prompt: string, referenceUrl?: string): Promise<string> {
   const safePrompt = sanitizeImagePrompt(prompt);
+  const content: any[] = [
+    {
+      type: "text",
+      text:
+        (referenceUrl
+          ? "Use the attached reference photo as the character's face/look reference. Keep the SAME woman (same face, hair, body shape) across every generation. "
+          : "") + safePrompt,
+    },
+  ];
+  if (referenceUrl) {
+    content.push({ type: "image_url", image_url: { url: referenceUrl } });
+  }
   return requestGatewayImage(
     {
       model: "google/gemini-3.1-flash-image",
-      messages: [{ role: "user", content: safePrompt }],
+      messages: [{ role: "user", content }],
       modalities: ["image", "text"],
     },
     "Gateway image nano-banana-2",

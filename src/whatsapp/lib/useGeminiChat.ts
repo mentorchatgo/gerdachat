@@ -34,6 +34,48 @@ const REAL_PHOTOS: Record<string, string> = {
 const nowStamp = () =>
   new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
+// Extract `count` evenly-spaced frames from a video URL as JPEG data URLs.
+async function extractVideoFrames(url: string, count = 6): Promise<string[]> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    video.src = url;
+    video.crossOrigin = "anonymous";
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "auto";
+    const frames: string[] = [];
+    video.addEventListener("loadedmetadata", async () => {
+      try {
+        const duration = isFinite(video.duration) && video.duration > 0 ? video.duration : 1;
+        const w = Math.min(640, video.videoWidth || 640);
+        const h = Math.round(((video.videoHeight || 360) * w) / (video.videoWidth || 640));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("no canvas ctx"));
+        for (let i = 0; i < count; i++) {
+          const t = (duration * (i + 0.5)) / count;
+          await new Promise<void>((res) => {
+            const onSeeked = () => {
+              video.removeEventListener("seeked", onSeeked);
+              res();
+            };
+            video.addEventListener("seeked", onSeeked);
+            video.currentTime = Math.min(t, Math.max(0, duration - 0.05));
+          });
+          ctx.drawImage(video, 0, 0, w, h);
+          frames.push(canvas.toDataURL("image/jpeg", 0.7));
+        }
+        resolve(frames);
+      } catch (e) {
+        reject(e);
+      }
+    });
+    video.addEventListener("error", () => reject(new Error("video load error")));
+  });
+}
+
 export async function chooseVoiceForContact(_sysInstruct: string): Promise<string> {
   return "Aoede";
 }
@@ -192,6 +234,7 @@ export function useGeminiChat(customConfig?: ContactConfig) {
     isAudio: boolean;
     audio?: { data: string; format: string };
     imageDataUrl?: string;
+    videoFrames?: string[];
   };
   const initializedRef = useRef<Record<string, boolean>>({});
   const queueRef = useRef<Record<string, QueueItem[]>>({});
@@ -274,6 +317,7 @@ export function useGeminiChat(customConfig?: ContactConfig) {
                 message: userText || "",
                 audio: item.audio,
                 imageDataUrl: item.imageDataUrl,
+                videoFrames: item.videoFrames,
               },
             });
             text = res.text || "";
@@ -367,11 +411,11 @@ export function useGeminiChat(customConfig?: ContactConfig) {
                 variations[Math.floor(Math.random() * variations.length)];
               const styleHint =
                 contactId === "gerda"
-                  ? `Realistic amateur phone photo of a fictional plus-size middle-aged Dutch woman with a round friendly face, messy hair, ${variation}, vertical 9:16 framing, authentic imperfect smartphone quality, warm non-mocking everyday candid photo, no minors, no explicit or sexual content, not a studio photo.`
+                  ? `Realistic amateur phone photo of the SAME fictional plus-size middle-aged Dutch woman as in the reference photo (https://i.imgur.com/e9o18Au.jpeg) — her face, hair color, hairstyle and body shape must stay consistent with that reference in every image, like the same person photographed in a new situation. ${variation}, vertical 9:16 framing, authentic imperfect smartphone quality, warm non-mocking everyday candid photo, no minors, no explicit or sexual content, not a studio photo.`
                   : `Realistic casual amateur smartphone photo, ${variation}, vertical 9:16, authentic imperfect quality.`;
               const fullPrompt = `${genMatch[1].trim()}. ${styleHint}`;
               const imgRes = await generateContactImage({
-                data: { prompt: fullPrompt },
+                data: { prompt: fullPrompt, useReference: contactId === "gerda" },
               });
               const imgMsg: ChatMessage = {
                 id: Date.now() + "_i",
@@ -453,10 +497,21 @@ export function useGeminiChat(customConfig?: ContactConfig) {
         audioPayload = { data: audioData.data, format: fmt };
       }
 
+      // Extract a handful of frames from the uploaded video so Gemini can
+      // actually "see" what's in the clip.
+      let videoFrames: string[] | undefined;
+      if (videoData) {
+        try {
+          videoFrames = await extractVideoFrames(videoData.url, 6);
+        } catch (e) {
+          console.error("video frame extraction failed", e);
+        }
+      }
+
       const queueText = audioData
         ? "" // Gemini krijgt de audio zelf — geen placeholder tekst meer.
         : videoData
-        ? `${text}\n[de gebruiker heeft een video meegestuurd${text ? "" : " — reageer kort en speels op het feit dat je een filmpje hebt gekregen"}]`
+        ? `${text}\n[de gebruiker heeft een video meegestuurd — je krijgt frames uit dat filmpje meegestuurd, bekijk ze en reageer op wat er gebeurt${text ? "" : ", kort en speels"}]`
         : imageData
         ? text || "(de gebruiker heeft een afbeelding meegestuurd — bekijk en reageer)"
         : text;
@@ -466,6 +521,7 @@ export function useGeminiChat(customConfig?: ContactConfig) {
         isAudio: !!audioData,
         audio: audioPayload,
         imageDataUrl: imageData,
+        videoFrames,
       });
       processQueue(contactId);
     },
