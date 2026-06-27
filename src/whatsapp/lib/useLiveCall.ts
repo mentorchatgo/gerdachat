@@ -176,8 +176,8 @@ export function useLiveCall(customConfig?: { name: string; sysInstruct: string; 
         let pcm16 = float32ToPCM16(inputData);
         let shouldInterrupt = false;
         if (isAISpeaking) {
-          // Onderbrekings-gevoeligheid: 6x minder gevoelig dan upstream (0.018 -> 0.108).
-          if (rms > 0.108) shouldInterrupt = true;
+          // Onderbrekings-gevoeligheid: 6x minder gevoelig dan upstream, en nog eens 30% minder gevoelig (0.108 -> 0.1404).
+          if (rms > 0.1404) shouldInterrupt = true;
         } else {
           interruptionCounterRef.current = 0;
         }
