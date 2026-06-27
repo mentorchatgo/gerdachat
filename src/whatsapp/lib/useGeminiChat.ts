@@ -369,11 +369,11 @@ export function useGeminiChat(customConfig?: ContactConfig) {
                 variations[Math.floor(Math.random() * variations.length)];
               const styleHint =
                 contactId === "gerda"
-                  ? `Realistic amateur phone photo of a fictional plus-size middle-aged Dutch woman with a round friendly face, messy hair, ${variation}, vertical 9:16 framing, authentic imperfect smartphone quality, warm non-mocking everyday candid photo, no minors, no explicit or sexual content, not a studio photo.`
+                  ? `Realistic amateur phone photo of the SAME fictional plus-size middle-aged Dutch woman as in the reference photo (https://i.imgur.com/e9o18Au.jpeg) — her face, hair color, hairstyle and body shape must stay consistent with that reference in every image, like the same person photographed in a new situation. ${variation}, vertical 9:16 framing, authentic imperfect smartphone quality, warm non-mocking everyday candid photo, no minors, no explicit or sexual content, not a studio photo.`
                   : `Realistic casual amateur smartphone photo, ${variation}, vertical 9:16, authentic imperfect quality.`;
               const fullPrompt = `${genMatch[1].trim()}. ${styleHint}`;
               const imgRes = await generateContactImage({
-                data: { prompt: fullPrompt },
+                data: { prompt: fullPrompt, useReference: contactId === "gerda" },
               });
               const imgMsg: ChatMessage = {
                 id: Date.now() + "_i",
