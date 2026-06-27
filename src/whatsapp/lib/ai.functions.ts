@@ -5,6 +5,7 @@ import {
   gatewayImage,
   gatewayNanoBananaImage,
   sanitizeImagePrompt,
+  GERDA_REFERENCE_IMAGE,
   type ChatTurn,
 } from "./ai-gateway.server";
 
@@ -19,20 +20,23 @@ const ChatInput = z.object({
   message: z.string(),
   audio: z
     .object({
-      data: z.string(), // base64 (no data URL prefix)
-      format: z.string(), // "webm" | "mp4" | "wav" | "mp3" | ...
+      data: z.string(),
+      format: z.string(),
     })
     .optional(),
   imageDataUrl: z.string().optional(),
+  videoFrames: z.array(z.string()).optional(),
 });
 
 export const chatTurn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => ChatInput.parse(d))
   .handler(async ({ data }) => {
-    // Build the latest user turn. If we have audio or an image, send a
-    // multimodal content array so Gemini actually understands the input.
     let latest: ChatTurn;
-    if (data.audio || data.imageDataUrl) {
+    const hasMedia =
+      data.audio ||
+      data.imageDataUrl ||
+      (data.videoFrames && data.videoFrames.length > 0);
+    if (hasMedia) {
       const parts: any[] = [];
       if (data.message && data.message.trim()) {
         parts.push({ type: "text", text: data.message });
@@ -41,11 +45,21 @@ export const chatTurn = createServerFn({ method: "POST" })
           type: "text",
           text: "(Spraakbericht van de gebruiker — luister naar de audio hieronder en reageer kort en natuurlijk in spreektaal alsof je het gewoon hebt gehoord.)",
         });
+      } else if (data.videoFrames && data.videoFrames.length) {
+        parts.push({
+          type: "text",
+          text: `(De gebruiker heeft een video gestuurd. Hieronder zie je ${data.videoFrames.length} losse frames uit die video, op volgorde. Bekijk ze, snap wat er gebeurt, en reageer er kort en speels op alsof je het filmpje hebt gezien.)`,
+        });
       } else {
         parts.push({ type: "text", text: "(Bekijk de meegestuurde afbeelding en reageer.)" });
       }
       if (data.imageDataUrl) {
         parts.push({ type: "image_url", image_url: { url: data.imageDataUrl } });
+      }
+      if (data.videoFrames) {
+        for (const frame of data.videoFrames) {
+          parts.push({ type: "image_url", image_url: { url: frame } });
+        }
       }
       if (data.audio) {
         parts.push({
@@ -67,21 +81,24 @@ export const chatTurn = createServerFn({ method: "POST" })
     return { text };
   });
 
-const ImageInput = z.object({ prompt: z.string().min(1) });
+const ImageInput = z.object({
+  prompt: z.string().min(1),
+  useReference: z.boolean().optional(),
+});
 
 export const generateContactImage = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => ImageInput.parse(d))
   .handler(async ({ data }) => {
     const imagePrompt = sanitizeImagePrompt(data.prompt);
-    // Primary: Lovable AI Gateway (openai/gpt-image-2). Fallback: Nano Banana 2.
-    // Flux is intentionally not used.
+    const ref = data.useReference ? GERDA_REFERENCE_IMAGE : undefined;
+    // Primary: gpt-image-2. Fallback: Nano Banana 2 (kan de echte referentiefoto zien).
     try {
-      const dataUrl = await gatewayImage(imagePrompt);
+      const dataUrl = await gatewayImage(imagePrompt, ref);
       return { dataUrl };
     } catch (e1) {
       console.error("[image] gateway gpt-image-2 failed, trying nano banana 2:", e1);
       try {
-        const dataUrl = await gatewayNanoBananaImage(imagePrompt);
+        const dataUrl = await gatewayNanoBananaImage(imagePrompt, ref);
         return { dataUrl };
       } catch (e2) {
         console.error("[image] nano banana 2 failed too:", e2);
