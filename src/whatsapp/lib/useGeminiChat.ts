@@ -34,6 +34,48 @@ const REAL_PHOTOS: Record<string, string> = {
 const nowStamp = () =>
   new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
+// Extract `count` evenly-spaced frames from a video URL as JPEG data URLs.
+async function extractVideoFrames(url: string, count = 6): Promise<string[]> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    video.src = url;
+    video.crossOrigin = "anonymous";
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "auto";
+    const frames: string[] = [];
+    video.addEventListener("loadedmetadata", async () => {
+      try {
+        const duration = isFinite(video.duration) && video.duration > 0 ? video.duration : 1;
+        const w = Math.min(640, video.videoWidth || 640);
+        const h = Math.round(((video.videoHeight || 360) * w) / (video.videoWidth || 640));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("no canvas ctx"));
+        for (let i = 0; i < count; i++) {
+          const t = (duration * (i + 0.5)) / count;
+          await new Promise<void>((res) => {
+            const onSeeked = () => {
+              video.removeEventListener("seeked", onSeeked);
+              res();
+            };
+            video.addEventListener("seeked", onSeeked);
+            video.currentTime = Math.min(t, Math.max(0, duration - 0.05));
+          });
+          ctx.drawImage(video, 0, 0, w, h);
+          frames.push(canvas.toDataURL("image/jpeg", 0.7));
+        }
+        resolve(frames);
+      } catch (e) {
+        reject(e);
+      }
+    });
+    video.addEventListener("error", () => reject(new Error("video load error")));
+  });
+}
+
 export async function chooseVoiceForContact(_sysInstruct: string): Promise<string> {
   return "Aoede";
 }
