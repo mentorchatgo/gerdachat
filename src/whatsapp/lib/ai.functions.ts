@@ -90,23 +90,32 @@ export const generateContactImage = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => ImageInput.parse(d))
   .handler(async ({ data }) => {
     const imagePrompt = sanitizeImagePrompt(data.prompt);
+    // When a reference photo is provided, Nano Banana 2 (gemini-3.1-flash-image) is the
+    // primary because it can ACTUALLY see the reference image (gpt-image-2 only gets text).
+    // Zonder referentie: gpt-image-2 eerst.
     const ref = data.useReference ? GERDA_REFERENCE_IMAGE : undefined;
-    // Primary: gpt-image-2. Fallback: Nano Banana 2 (kan de echte referentiefoto zien).
+    const primary = ref
+      ? () => gatewayNanoBananaImage(imagePrompt, ref)
+      : () => gatewayImage(imagePrompt, ref);
+    const fallback = ref
+      ? () => gatewayNanoBananaImage(imagePrompt, ref) // retry nano banana — gpt-image-2 negeert de referentie toch
+      : () => gatewayNanoBananaImage(imagePrompt, ref);
     try {
-      const dataUrl = await gatewayImage(imagePrompt, ref);
+      const dataUrl = await primary();
       return { dataUrl };
     } catch (e1) {
-      console.error("[image] gateway gpt-image-2 failed, trying nano banana 2:", e1);
+      console.error("[image] primary image gen failed, retrying:", e1);
       try {
-        const dataUrl = await gatewayNanoBananaImage(imagePrompt, ref);
+        const dataUrl = await fallback();
         return { dataUrl };
       } catch (e2) {
-        console.error("[image] nano banana 2 failed too:", e2);
+        console.error("[image] fallback failed too:", e2);
         throw new Error(
-          `Image generation failed: ${(e1 as Error).message} | nano banana 2: ${(e2 as Error).message}`,
+          `Image generation failed: ${(e1 as Error).message} | fallback: ${(e2 as Error).message}`,
         );
       }
     }
+
   });
 
 const TtsInput = z.object({ text: z.string().min(1), voiceName: z.string().optional() });
