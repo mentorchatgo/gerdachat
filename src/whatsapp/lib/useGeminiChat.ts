@@ -275,6 +275,7 @@ export function useGeminiChat(customConfig?: ContactConfig) {
                 message: userText || "",
                 audio: item.audio,
                 imageDataUrl: item.imageDataUrl,
+                videoFrames: item.videoFrames,
               },
             });
             text = res.text || "";
