@@ -455,10 +455,21 @@ export function useGeminiChat(customConfig?: ContactConfig) {
         audioPayload = { data: audioData.data, format: fmt };
       }
 
+      // Extract a handful of frames from the uploaded video so Gemini can
+      // actually "see" what's in the clip.
+      let videoFrames: string[] | undefined;
+      if (videoData) {
+        try {
+          videoFrames = await extractVideoFrames(videoData.url, 6);
+        } catch (e) {
+          console.error("video frame extraction failed", e);
+        }
+      }
+
       const queueText = audioData
         ? "" // Gemini krijgt de audio zelf — geen placeholder tekst meer.
         : videoData
-        ? `${text}\n[de gebruiker heeft een video meegestuurd${text ? "" : " — reageer kort en speels op het feit dat je een filmpje hebt gekregen"}]`
+        ? `${text}\n[de gebruiker heeft een video meegestuurd — je krijgt frames uit dat filmpje meegestuurd, bekijk ze en reageer op wat er gebeurt${text ? "" : ", kort en speels"}]`
         : imageData
         ? text || "(de gebruiker heeft een afbeelding meegestuurd — bekijk en reageer)"
         : text;
@@ -468,6 +479,7 @@ export function useGeminiChat(customConfig?: ContactConfig) {
         isAudio: !!audioData,
         audio: audioPayload,
         imageDataUrl: imageData,
+        videoFrames,
       });
       processQueue(contactId);
     },
