@@ -58,18 +58,17 @@ export async function gatewayImage(prompt: string, referenceUrl?: string): Promi
 
 export async function gatewayNanoBananaImage(prompt: string, referenceUrl?: string): Promise<string> {
   const safePrompt = sanitizeImagePrompt(prompt);
+  const refUrl = referenceUrl ?? GERDA_REFERENCE_IMAGE;
   const content: any[] = [
+    { type: "image_url", image_url: { url: refUrl } },
     {
       type: "text",
       text:
-        (referenceUrl
-          ? "Use the attached reference photo as the character's face/look reference. Keep the SAME woman (same face, hair, body shape) across every generation. "
-          : "") + safePrompt,
+        "CRITICAL: The attached photo IS the character. You MUST generate a new image of the EXACT SAME person from that photo — same face shape, same bald head, same skin tone, same chin, same body, same age, same gender, same overall look. Do NOT invent a different person. Treat this as image editing / character consistency: keep the identity from the reference photo 100% intact, but place this same person in the new scene described below.\n\nScene: " +
+        safePrompt +
+        "\n\nVertical 9:16 amateur smartphone photo, authentic everyday candid, not a studio photo, no text overlays.",
     },
   ];
-  if (referenceUrl) {
-    content.push({ type: "image_url", image_url: { url: referenceUrl } });
-  }
   return requestGatewayImage(
     {
       model: "google/gemini-3.1-flash-image",
