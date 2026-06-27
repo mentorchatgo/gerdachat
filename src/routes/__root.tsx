@@ -77,18 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Gerda Whatsapp" },
+      { title: "Gerda chat - Whatsapp" },
       { name: "description", content: "Chat met Gerda via Whatsapp - Nieuwe updates en nieuwe mogelijkheden!" },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Gerda Whatsapp" },
+      { property: "og:title", content: "Gerda chat - Whatsapp" },
       { property: "og:description", content: "Chat met Gerda via Whatsapp - Nieuwe updates en nieuwe mogelijkheden!" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "Gerda Whatsapp" },
+      { name: "twitter:title", content: "Gerda chat - Whatsapp" },
       { name: "twitter:description", content: "Chat met Gerda via Whatsapp - Nieuwe updates en nieuwe mogelijkheden!" },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/tYVoiFYVQlYOGaLApmYEJRNs2zG2/social-images/social-1782430072098-Chat_only_with_Gerda_202606260127.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/tYVoiFYVQlYOGaLApmYEJRNs2zG2/social-images/social-1782430072098-Chat_only_with_Gerda_202606260127.webp" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/UqSpVefY1RhjYgGtcMJvVV1z2A63/social-images/social-1782547730143-media(1).webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/UqSpVefY1RhjYgGtcMJvVV1z2A63/social-images/social-1782547730143-media(1).webp" },
     ],
     links: [
       {
