@@ -192,6 +192,7 @@ export function useGeminiChat(customConfig?: ContactConfig) {
     isAudio: boolean;
     audio?: { data: string; format: string };
     imageDataUrl?: string;
+    videoFrames?: string[];
   };
   const initializedRef = useRef<Record<string, boolean>>({});
   const queueRef = useRef<Record<string, QueueItem[]>>({});
