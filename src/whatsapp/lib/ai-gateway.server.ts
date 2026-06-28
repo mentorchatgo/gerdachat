@@ -23,15 +23,6 @@ export type ChatTurn = {
 };
 
 export async function gatewayChat(messages: ChatTurn[], model = "google/gemini-3-flash-preview"): Promise<string> {
-  // 1) Probeer eerst de directe Gemini API (GEMINI_API_KEY) — die heeft eigen credits.
-  if (process.env.GEMINI_API_KEY) {
-    try {
-      return await geminiDirectChat(messages);
-    } catch (e: any) {
-      console.warn("[chat] direct Gemini API failed, falling back to Lovable Gateway:", e?.message || e);
-    }
-  }
-  // 2) Fallback: Lovable AI Gateway.
   const res = await fetch(`${BASE}/chat/completions`, {
     method: "POST",
     headers: authHeaders(),
@@ -45,71 +36,6 @@ export async function gatewayChat(messages: ChatTurn[], model = "google/gemini-3
   return data.choices?.[0]?.message?.content ?? "";
 }
 
-async function geminiDirectChat(turns: ChatTurn[]): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("no GEMINI_API_KEY");
-  let systemInstruction: string | undefined;
-  const contents: any[] = [];
-  for (const t of turns) {
-    if (t.role === "system") {
-      systemInstruction = typeof t.content === "string"
-        ? t.content
-        : t.content.map((p: any) => (p.type === "text" ? p.text : "")).join("");
-      continue;
-    }
-    const role = t.role === "assistant" ? "model" : "user";
-    const parts: any[] = [];
-    if (typeof t.content === "string") {
-      parts.push({ text: t.content });
-    } else {
-      for (const p of t.content as any[]) {
-        if (p.type === "text") {
-          parts.push({ text: p.text });
-        } else if (p.type === "image_url") {
-          const url: string = p.image_url.url;
-          if (url.startsWith("data:")) {
-            const comma = url.indexOf(",");
-            const mime = url.slice(5, url.indexOf(";"));
-            parts.push({ inlineData: { mimeType: mime, data: url.slice(comma + 1) } });
-          } else {
-            const r = await fetch(url);
-            if (!r.ok) throw new Error(`fetch image ${r.status}`);
-            const buf = new Uint8Array(await r.arrayBuffer());
-            let s = "";
-            for (let i = 0; i < buf.length; i += 0x8000) {
-              s += String.fromCharCode.apply(null, Array.from(buf.subarray(i, i + 0x8000)) as any);
-            }
-            const mime = r.headers.get("content-type")?.split(";")[0] || "image/jpeg";
-            parts.push({ inlineData: { mimeType: mime, data: btoa(s) } });
-          }
-        } else if (p.type === "input_audio") {
-          parts.push({
-            inlineData: {
-              mimeType: `audio/${p.input_audio.format}`,
-              data: p.input_audio.data,
-            },
-          });
-        }
-      }
-    }
-    contents.push({ role, parts });
-  }
-  const model = "gemini-3-flash-preview";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  const body: any = { contents };
-  if (systemInstruction) body.systemInstruction = { parts: [{ text: systemInstruction }] };
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    throw new Error(`Gemini direct ${res.status}: ${await res.text()}`);
-  }
-  const data = (await res.json()) as any;
-  const out = data?.candidates?.[0]?.content?.parts ?? [];
-  return out.map((p: any) => p.text || "").join("");
-}
 
 // Vaste referentiefoto's voor Gerda — gebruikt om gezicht/uiterlijk consistent te houden.
 export const GERDA_REFERENCE_IMAGE = "https://i.imgur.com/e9o18Au.jpeg";
