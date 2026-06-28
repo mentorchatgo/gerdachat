@@ -93,7 +93,7 @@ export async function nvidiaDeepseekChat(messages: ChatTurn[]): Promise<string> 
       Authorization: `Bearer ${k}`,
     },
     body: JSON.stringify({
-      model: "deepseek-ai/deepseek-v3.1",
+      model: "deepseek-ai/deepseek-v4-flash",
       messages: flat,
       max_tokens: 2048,
       temperature: 0.7,
