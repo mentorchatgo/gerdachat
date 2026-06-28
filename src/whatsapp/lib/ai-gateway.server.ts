@@ -37,23 +37,43 @@ export type ChatTurn = {
 };
 
 export async function gatewayChat(messages: ChatTurn[], model = "google/gemini-3-flash-preview"): Promise<string> {
-  const res = await fetch(`${BASE}/chat/completions`, {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify({ model, messages, max_tokens: 2048 }),
-  });
-  if (!res.ok) {
-    const txt = await res.text();
-    if (res.status === 402) {
-      throw new GatewayPaymentRequiredError(`Gateway chat error 402: ${txt}`);
+  // 1) Try direct Gemini API first (uses GEMINI_API_KEY, no Lovable credits).
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      const { geminiDirectChat } = await import("./gemini-direct.server");
+      return await geminiDirectChat(messages);
+    } catch (e) {
+      console.warn("[chat] gemini direct failed, falling back to Lovable gateway:", (e as Error).message);
     }
-    if (res.status === 429) {
-      throw new GatewayRateLimitError(`Gateway chat error 429: ${txt}`);
-    }
-    throw new Error(`Gateway chat error ${res.status}: ${txt}`);
   }
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content ?? "";
+  // 2) Lovable AI Gateway.
+  try {
+    const res = await fetch(`${BASE}/chat/completions`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ model, messages, max_tokens: 2048 }),
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      if (res.status === 402) throw new GatewayPaymentRequiredError(`Gateway chat 402: ${txt}`);
+      if (res.status === 429) throw new GatewayRateLimitError(`Gateway chat 429: ${txt}`);
+      throw new Error(`Gateway chat error ${res.status}: ${txt}`);
+    }
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content ?? "";
+  } catch (e) {
+    // 3) NVIDIA deepseek-v4-flash as last resort.
+    if (process.env.NVIDIA_API_KEY) {
+      console.warn("[chat] Lovable gateway failed, falling back to NVIDIA deepseek:", (e as Error).message);
+      try {
+        const { nvidiaDeepseekChat } = await import("./gemini-direct.server");
+        return await nvidiaDeepseekChat(messages);
+      } catch (e2) {
+        console.error("[chat] NVIDIA deepseek also failed:", (e2 as Error).message);
+      }
+    }
+    throw e;
+  }
 }
 
 

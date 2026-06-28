@@ -125,7 +125,20 @@ export const generateContactImage = createServerFn({ method: "POST" })
         const dataUrl = await fallback();
         return { dataUrl };
       } catch (e2) {
-        console.error("[image] fallback failed too:", e2);
+        console.error("[image] gateway fallback failed too:", e2);
+        // Final fallback: NVIDIA flux.2-klein-4b (uses NVIDIA_API_KEY, no Lovable credits).
+        if (process.env.NVIDIA_API_KEY) {
+          try {
+            const { generateWithFlux } = await import("./nvidia-flux.server");
+            const dataUrl = await generateWithFlux(imagePrompt);
+            return { dataUrl };
+          } catch (e3) {
+            console.error("[image] NVIDIA flux fallback failed:", e3);
+            throw new Error(
+              `Image gen failed: gateway=${(e1 as Error).message} | retry=${(e2 as Error).message} | nvidia=${(e3 as Error).message}`,
+            );
+          }
+        }
         throw new Error(
           `Image generation failed: ${(e1 as Error).message} | fallback: ${(e2 as Error).message}`,
         );
