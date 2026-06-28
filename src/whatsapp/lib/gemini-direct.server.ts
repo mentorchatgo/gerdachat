@@ -9,6 +9,101 @@ function key(): string {
   return k;
 }
 
+type ChatPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } }
+  | { type: "input_audio"; input_audio: { data: string; format: string } };
+type ChatTurn = { role: "system" | "user" | "assistant"; content: string | ChatPart[] };
+
+async function urlToInlineData(url: string): Promise<{ mimeType: string; data: string }> {
+  if (url.startsWith("data:")) {
+    const m = url.match(/^data:([^;]+);base64,(.*)$/);
+    if (!m) throw new Error("Invalid data URL");
+    return { mimeType: m[1], data: m[2] };
+  }
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`fetch ref ${r.status}`);
+  const mimeType = r.headers.get("content-type") || "image/jpeg";
+  const buf = new Uint8Array(await r.arrayBuffer());
+  let s = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < buf.length; i += chunk) {
+    s += String.fromCharCode.apply(null, Array.from(buf.subarray(i, i + chunk)) as any);
+  }
+  return { mimeType, data: btoa(s) };
+}
+
+export async function geminiDirectChat(messages: ChatTurn[]): Promise<string> {
+  const model = "gemini-3-flash-preview";
+  const sys = messages.find((m) => m.role === "system");
+  const rest = messages.filter((m) => m.role !== "system");
+  const contents: any[] = [];
+  for (const m of rest) {
+    const parts: any[] = [];
+    if (typeof m.content === "string") {
+      parts.push({ text: m.content });
+    } else {
+      for (const p of m.content) {
+        if (p.type === "text") parts.push({ text: p.text });
+        else if (p.type === "image_url") {
+          try {
+            parts.push({ inlineData: await urlToInlineData(p.image_url.url) });
+          } catch {}
+        } else if (p.type === "input_audio") {
+          const mime = p.input_audio.format === "wav" ? "audio/wav" : `audio/${p.input_audio.format}`;
+          parts.push({ inlineData: { mimeType: mime, data: p.input_audio.data } });
+        }
+      }
+    }
+    contents.push({ role: m.role === "assistant" ? "model" : "user", parts });
+  }
+  const body: any = { contents, generationConfig: { maxOutputTokens: 2048 } };
+  if (sys && typeof sys.content === "string") {
+    body.systemInstruction = { parts: [{ text: sys.content }] };
+  }
+  const url = `${BASE}/models/${model}:generateContent?key=${key()}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`Gemini direct ${res.status}: ${await res.text()}`);
+  }
+  const data = (await res.json()) as any;
+  const parts = data?.candidates?.[0]?.content?.parts ?? [];
+  return parts.map((p: any) => p.text || "").join("");
+}
+
+export async function nvidiaDeepseekChat(messages: ChatTurn[]): Promise<string> {
+  const k = process.env.NVIDIA_API_KEY;
+  if (!k) throw new Error("Missing NVIDIA_API_KEY");
+  // NVIDIA NIM accepts only text content; strip non-text parts.
+  const flat = messages.map((m) => {
+    if (typeof m.content === "string") return { role: m.role, content: m.content };
+    const text = m.content
+      .map((p) => (p.type === "text" ? p.text : p.type === "image_url" ? "[afbeelding]" : "[audio]"))
+      .join(" ");
+    return { role: m.role, content: text };
+  });
+  const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${k}`,
+    },
+    body: JSON.stringify({
+      model: "deepseek-ai/deepseek-v3.1",
+      messages: flat,
+      max_tokens: 2048,
+      temperature: 0.7,
+    }),
+  });
+  if (!res.ok) throw new Error(`NVIDIA deepseek ${res.status}: ${await res.text()}`);
+  const data = (await res.json()) as any;
+  return data.choices?.[0]?.message?.content ?? "";
+}
+
 export async function generateImageGemini(prompt: string): Promise<string> {
   const model = "gemini-2.5-flash-image-preview";
   const url = `${BASE}/models/${model}:generateContent?key=${key()}`;
