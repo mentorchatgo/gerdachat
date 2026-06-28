@@ -176,8 +176,8 @@ export function useLiveCall(customConfig?: { name: string; sysInstruct: string; 
         let pcm16 = float32ToPCM16(inputData);
         let shouldInterrupt = false;
         if (isAISpeaking) {
-          // Onderbrekings-gevoeligheid: 6x minder gevoelig dan upstream, en nog eens 30% minder gevoelig (0.108 -> 0.1404).
-          if (rms > 0.1404) shouldInterrupt = true;
+          // Onderbrekings-gevoeligheid: 6x minder gevoelig dan upstream, en nog twee keer 30% minder gevoelig (0.1404 -> 0.18252).
+          if (rms > 0.18252) shouldInterrupt = true;
         } else {
           interruptionCounterRef.current = 0;
         }
@@ -187,7 +187,7 @@ export function useLiveCall(customConfig?: { name: string; sysInstruct: string; 
             session.sendClientContent({ turnComplete: false });
           }).catch(console.error);
         } else if (isAISpeaking) {
-          if (rms < 0.0936) pcm16 = new Int16Array(pcm16.length);
+          if (rms < 0.12168) pcm16 = new Int16Array(pcm16.length);
         }
         const base64Data = pcm16ToBase64(pcm16);
         sessionRef.current.then((session: any) => {

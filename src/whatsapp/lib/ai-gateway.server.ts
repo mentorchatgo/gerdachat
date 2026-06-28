@@ -36,13 +36,15 @@ export async function gatewayChat(messages: ChatTurn[], model = "google/gemini-3
   return data.choices?.[0]?.message?.content ?? "";
 }
 
-// Vaste referentiefoto voor Gerda — gebruikt om gezicht/uiterlijk consistent te houden.
+// Vaste referentiefoto's voor Gerda — gebruikt om gezicht/uiterlijk consistent te houden.
 export const GERDA_REFERENCE_IMAGE = "https://i.imgur.com/e9o18Au.jpeg";
+export const GERDA_REFERENCE_IMAGE_2 = "https://i.imgur.com/aVca7ZO.jpeg";
+export const GERDA_REFERENCE_IMAGES = [GERDA_REFERENCE_IMAGE, GERDA_REFERENCE_IMAGE_2];
 
 export async function gatewayImage(prompt: string, referenceUrl?: string): Promise<string> {
   const safePrompt = sanitizeImagePrompt(prompt);
   const refLine = referenceUrl
-    ? ` The subject's face, hair, body shape and overall look must stay CONSISTENT with the reference character portrait at ${referenceUrl} (same woman, same face, same hairstyle, same body type in every image).`
+    ? ` The subject's face, hair (completely bald, no hair), body shape and overall look must stay CONSISTENT with the reference character portraits at ${GERDA_REFERENCE_IMAGE} and ${GERDA_REFERENCE_IMAGE_2} (same woman, same bald head, same face, same body type in every image).`
     : "";
   return requestGatewayImage(
     {
@@ -58,13 +60,13 @@ export async function gatewayImage(prompt: string, referenceUrl?: string): Promi
 
 export async function gatewayNanoBananaImage(prompt: string, referenceUrl?: string): Promise<string> {
   const safePrompt = sanitizeImagePrompt(prompt);
-  const refUrl = referenceUrl ?? GERDA_REFERENCE_IMAGE;
+  const refUrls = referenceUrl ? [referenceUrl, GERDA_REFERENCE_IMAGE_2] : GERDA_REFERENCE_IMAGES;
   const content: any[] = [
-    { type: "image_url", image_url: { url: refUrl } },
+    ...refUrls.map((url) => ({ type: "image_url", image_url: { url } })),
     {
       type: "text",
       text:
-        "CRITICAL: The attached photo IS the character. You MUST generate a new image of the EXACT SAME person from that photo — same face shape, same bald head, same skin tone, same chin, same body, same age, same gender, same overall look. Do NOT invent a different person. Treat this as image editing / character consistency: keep the identity from the reference photo 100% intact, but place this same person in the new scene described below.\n\nScene: " +
+        "CRITICAL: The attached photos ARE the character (multiple reference photos of the SAME person). You MUST generate a new image of the EXACT SAME person from those photos — same face shape, COMPLETELY BALD HEAD (no hair at all), same skin tone, same chin, same body, same age, same gender, same overall look. Do NOT invent a different person and do NOT add hair. Treat this as image editing / character consistency: keep the identity from the reference photos 100% intact, but place this same bald person in the new scene described below.\n\nScene: " +
         safePrompt +
         "\n\nVertical 9:16 amateur smartphone photo, authentic everyday candid, not a studio photo, no text overlays.",
     },
