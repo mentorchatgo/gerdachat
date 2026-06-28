@@ -343,6 +343,22 @@ export function useGeminiChat(customConfig?: ContactConfig) {
             MemoryService.saveMemory(m[1].trim());
           }
 
+          const systemErrorMatch = text.match(/\[SYSTEM_ERROR:\s*([^\]]+)\]/i);
+          if (systemErrorMatch) {
+            const errMsg: ChatMessage = {
+              id: Date.now() + "_gateway_err",
+              sender: contactId,
+              text: systemErrorMatch[1].trim(),
+              timestamp: nowStamp(),
+            };
+            setMessagesMap((prev) => ({
+              ...prev,
+              [contactId]: [...(prev[contactId] || []), errMsg],
+            }));
+            setIsTypingMap((p) => ({ ...p, [contactId]: false }));
+            continue;
+          }
+
           // Parse [SEND_PHOTO: id]
           const photoMatch = text.match(/\[SEND_PHOTO:\s*([a-z_]+)\]/i);
           // Parse [GENERATE_IMAGE: prompt]

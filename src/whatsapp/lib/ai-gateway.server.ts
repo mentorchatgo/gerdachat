@@ -7,9 +7,23 @@ function authHeaders() {
   if (!key) throw new Error("Missing LOVABLE_API_KEY");
   return {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${key}`,
+    "Lovable-API-Key": key,
     "X-Lovable-AIG-SDK": "vercel-ai-sdk",
   };
+}
+
+export class GatewayPaymentRequiredError extends Error {
+  constructor(message = "Lovable AI credits zijn op") {
+    super(message);
+    this.name = "GatewayPaymentRequiredError";
+  }
+}
+
+export class GatewayRateLimitError extends Error {
+  constructor(message = "Lovable AI is tijdelijk te druk") {
+    super(message);
+    this.name = "GatewayRateLimitError";
+  }
 }
 
 export type ChatContentPart =
@@ -30,6 +44,12 @@ export async function gatewayChat(messages: ChatTurn[], model = "google/gemini-3
   });
   if (!res.ok) {
     const txt = await res.text();
+    if (res.status === 402) {
+      throw new GatewayPaymentRequiredError(`Gateway chat error 402: ${txt}`);
+    }
+    if (res.status === 429) {
+      throw new GatewayRateLimitError(`Gateway chat error 429: ${txt}`);
+    }
     throw new Error(`Gateway chat error ${res.status}: ${txt}`);
   }
   const data = await res.json();

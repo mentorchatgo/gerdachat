@@ -6,6 +6,8 @@ import {
   gatewayNanoBananaImage,
   sanitizeImagePrompt,
   GERDA_REFERENCE_IMAGE,
+  GatewayPaymentRequiredError,
+  GatewayRateLimitError,
   type ChatTurn,
 } from "./ai-gateway.server";
 
@@ -77,8 +79,22 @@ export const chatTurn = createServerFn({ method: "POST" })
       ...data.history,
       latest,
     ];
-    const text = await gatewayChat(turns);
-    return { text };
+    try {
+      const text = await gatewayChat(turns);
+      return { text };
+    } catch (error) {
+      if (error instanceof GatewayPaymentRequiredError) {
+        return {
+          text: "[SYSTEM_ERROR: Lovable AI credits zijn op. Voeg credits toe via Settings → Plans & credits om Gerda weer te laten antwoorden.]",
+        };
+      }
+      if (error instanceof GatewayRateLimitError) {
+        return {
+          text: "[SYSTEM_ERROR: Lovable AI is tijdelijk te druk. Probeer het zo nog eens.]",
+        };
+      }
+      throw error;
+    }
   });
 
 const ImageInput = z.object({
