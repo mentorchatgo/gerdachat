@@ -187,7 +187,7 @@ export function useLiveCall(customConfig?: { name: string; sysInstruct: string; 
             session.sendClientContent({ turnComplete: false });
           }).catch(console.error);
         } else if (isAISpeaking) {
-          if (rms < 0.0936) pcm16 = new Int16Array(pcm16.length);
+          if (rms < 0.12168) pcm16 = new Int16Array(pcm16.length);
         }
         const base64Data = pcm16ToBase64(pcm16);
         sessionRef.current.then((session: any) => {
