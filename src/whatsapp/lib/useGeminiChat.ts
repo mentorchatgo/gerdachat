@@ -76,6 +76,25 @@ async function extractVideoFrames(url: string, count = 6): Promise<string[]> {
   });
 }
 
+// Read a blob:// or data: URL as a base64 data URL with its real mime type.
+// Gemini accepts inlineData with video/* mime types, so this lets the model
+// actually watch the clip (motion + audio), not just 6 still frames.
+async function videoUrlToDataUrl(
+  url: string,
+  fallbackMime = "video/mp4",
+): Promise<{ dataUrl: string; sizeBytes: number }> {
+  const r = await fetch(url);
+  const buf = await r.arrayBuffer();
+  const mime = r.headers.get("content-type") || fallbackMime;
+  const bytes = new Uint8Array(buf);
+  let s = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    s += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)) as any);
+  }
+  return { dataUrl: `data:${mime};base64,${btoa(s)}`, sizeBytes: bytes.length };
+}
+
 export async function chooseVoiceForContact(_sysInstruct: string): Promise<string> {
   return "Aoede";
 }
