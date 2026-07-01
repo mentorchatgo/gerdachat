@@ -104,31 +104,54 @@ export async function nvidiaDeepseekChat(messages: ChatTurn[]): Promise<string> 
   return data.choices?.[0]?.message?.content ?? "";
 }
 
-export async function generateImageGemini(prompt: string): Promise<string> {
-  const model = "gemini-2.5-flash-image-preview";
-  const url = `${BASE}/models/${model}:generateContent?key=${key()}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { responseModalities: ["IMAGE"] },
-    }),
-  });
-  if (!res.ok) {
-    throw new Error(`Gemini image ${res.status}: ${await res.text()}`);
-  }
-  const data = (await res.json()) as any;
-  const parts = data?.candidates?.[0]?.content?.parts ?? [];
-  for (const p of parts) {
-    const inline = p.inlineData || p.inline_data;
-    if (inline?.data) {
-      const mime = inline.mimeType || inline.mime_type || "image/png";
-      return `data:${mime};base64,${inline.data}`;
+// Nano Banana 2 Lite via directe Gemini API (gebruikt GEMINI_API_KEY).
+// Ondersteunt optionele referentie-afbeeldingen zodat gezicht/uiterlijk consistent blijft.
+export async function generateImageGeminiNanoBanana2Lite(
+  prompt: string,
+  referenceUrls: string[] = [],
+): Promise<string> {
+  const models = ["gemini-3.1-flash-image-lite", "gemini-3.1-flash-image", "gemini-2.5-flash-image-preview"];
+  const parts: any[] = [];
+  for (const url of referenceUrls) {
+    try {
+      parts.push({ inlineData: await urlToInlineData(url) });
+    } catch (e) {
+      console.warn("[gemini-image] ref fetch failed:", (e as Error).message);
     }
   }
-  throw new Error("Gemini image: no inlineData in response");
+  parts.push({ text: prompt });
+
+  let lastErr = "";
+  for (const model of models) {
+    const url = `${BASE}/models/${model}:generateContent?key=${key()}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts }],
+        generationConfig: { responseModalities: ["IMAGE"] },
+      }),
+    });
+    if (!res.ok) {
+      lastErr = `${model} ${res.status}: ${await res.text()}`;
+      continue;
+    }
+    const data = (await res.json()) as any;
+    const outParts = data?.candidates?.[0]?.content?.parts ?? [];
+    for (const p of outParts) {
+      const inline = p.inlineData || p.inline_data;
+      if (inline?.data) {
+        const mime = inline.mimeType || inline.mime_type || "image/png";
+        return `data:${mime};base64,${inline.data}`;
+      }
+    }
+    lastErr = `${model}: no inlineData in response`;
+  }
+  throw new Error(`Gemini image failed: ${lastErr}`);
 }
+
+// Backwards-compat alias.
+export const generateImageGemini = (prompt: string) => generateImageGeminiNanoBanana2Lite(prompt, []);
 
 // PCM16 mono @ sampleRate to base64 WAV (data URL). Worker-safe.
 function pcm16Base64ToWavDataUrl(pcmB64: string, sampleRate = 24000): { dataUrl: string; durationSec: number } {
