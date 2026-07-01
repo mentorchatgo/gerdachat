@@ -50,7 +50,7 @@ export const chatTurn = createServerFn({ method: "POST" })
       } else if (data.videoFrames && data.videoFrames.length) {
         parts.push({
           type: "text",
-          text: `(De gebruiker heeft een video gestuurd. Hieronder zie je ${data.videoFrames.length} losse frames uit die video, op volgorde. Bekijk ze, snap wat er gebeurt, en reageer er kort en speels op alsof je het filmpje hebt gezien.)`,
+          text: `(De gebruiker heeft een filmpje gestuurd — hieronder krijg je het filmpje mee${data.videoFrames.length > 1 ? ` (of ${data.videoFrames.length} frames eruit)` : ""}. Bekijk het echt, snap wat er gebeurt, en reageer er kort en speels op alsof je het net hebt gezien.)`,
         });
       } else {
         parts.push({ type: "text", text: "(Bekijk de meegestuurde afbeelding en reageer.)" });

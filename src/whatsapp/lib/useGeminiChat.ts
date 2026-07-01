@@ -76,6 +76,25 @@ async function extractVideoFrames(url: string, count = 6): Promise<string[]> {
   });
 }
 
+// Read a blob:// or data: URL as a base64 data URL with its real mime type.
+// Gemini accepts inlineData with video/* mime types, so this lets the model
+// actually watch the clip (motion + audio), not just 6 still frames.
+async function videoUrlToDataUrl(
+  url: string,
+  fallbackMime = "video/mp4",
+): Promise<{ dataUrl: string; sizeBytes: number }> {
+  const r = await fetch(url);
+  const buf = await r.arrayBuffer();
+  const mime = r.headers.get("content-type") || fallbackMime;
+  const bytes = new Uint8Array(buf);
+  let s = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    s += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)) as any);
+  }
+  return { dataUrl: `data:${mime};base64,${btoa(s)}`, sizeBytes: bytes.length };
+}
+
 export async function chooseVoiceForContact(_sysInstruct: string): Promise<string> {
   return "Aoede";
 }
@@ -513,21 +532,37 @@ export function useGeminiChat(customConfig?: ContactConfig) {
         audioPayload = { data: audioData.data, format: fmt };
       }
 
-      // Extract a handful of frames from the uploaded video so Gemini can
-      // actually "see" what's in the clip.
+      // Native video understanding: prefer sending the actual video file inline
+      // so Gemini can watch motion + hear audio. Fall back to still frames if
+      // the clip is too large to inline safely.
       let videoFrames: string[] | undefined;
       if (videoData) {
         try {
-          videoFrames = await extractVideoFrames(videoData.url, 6);
+          const { dataUrl, sizeBytes } = await videoUrlToDataUrl(
+            videoData.url,
+            videoData.mimeType || "video/mp4",
+          );
+          if (sizeBytes <= 18 * 1024 * 1024) {
+            // Small enough — send the real video. Server inlines with correct MIME.
+            videoFrames = [dataUrl];
+          } else {
+            // Too big for inline; sample frames instead.
+            videoFrames = await extractVideoFrames(videoData.url, 8);
+          }
         } catch (e) {
-          console.error("video frame extraction failed", e);
+          console.error("video prep failed, falling back to frames", e);
+          try {
+            videoFrames = await extractVideoFrames(videoData.url, 8);
+          } catch (e2) {
+            console.error("video frame extraction failed", e2);
+          }
         }
       }
 
       const queueText = audioData
         ? "" // Gemini krijgt de audio zelf — geen placeholder tekst meer.
         : videoData
-        ? `${text}\n[de gebruiker heeft een video meegestuurd — je krijgt frames uit dat filmpje meegestuurd, bekijk ze en reageer op wat er gebeurt${text ? "" : ", kort en speels"}]`
+        ? `${text}\n[de gebruiker heeft een video gestuurd — je krijgt het echte filmpje mee (of anders losse frames). Bekijk het, snap wat er gebeurt en reageer${text ? "" : " kort en speels"}.]`
         : imageData
         ? text || "(de gebruiker heeft een afbeelding meegestuurd — bekijk en reageer)"
         : text;
