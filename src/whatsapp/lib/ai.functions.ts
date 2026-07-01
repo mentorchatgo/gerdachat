@@ -106,27 +106,39 @@ export const generateContactImage = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => ImageInput.parse(d))
   .handler(async ({ data }) => {
     const imagePrompt = sanitizeImagePrompt(data.prompt);
-    // When a reference photo is provided, Nano Banana 2 (gemini-3.1-flash-image) is the
-    // primary because it can ACTUALLY see the reference image (gpt-image-2 only gets text).
-    // Zonder referentie: gpt-image-2 eerst.
     const ref = data.useReference ? GERDA_REFERENCE_IMAGE : undefined;
+
+    // 1) Primair: Nano Banana 2 Lite via directe Gemini API (GEMINI_API_KEY, geen Lovable credits).
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        const { generateImageGeminiNanoBanana2Lite } = await import("./gemini-direct.server");
+        const { GERDA_REFERENCE_IMAGE_2 } = await import("./ai-gateway.server");
+        const refs = ref ? [ref, GERDA_REFERENCE_IMAGE_2] : [];
+        const scenePrompt = ref
+          ? `CRITICAL: Reference photos show the EXACT character. Generate a new image of the SAME person — same face, COMPLETELY BALD (no hair), same skin tone, same body, same age. Keep identity 100% intact.\n\nScene: ${imagePrompt}\n\nVertical 9:16 amateur smartphone photo, authentic candid, no text.`
+          : imagePrompt;
+        const dataUrl = await generateImageGeminiNanoBanana2Lite(scenePrompt, refs);
+        return { dataUrl };
+      } catch (e) {
+        console.warn("[image] Nano Banana 2 Lite via Gemini API failed, falling back to gateway:", (e as Error).message);
+      }
+    }
+
+    // 2) Fallback: Lovable AI Gateway (gpt-image-2 / nano-banana-2).
     const primary = ref
       ? () => gatewayNanoBananaImage(imagePrompt, ref)
       : () => gatewayImage(imagePrompt, ref);
-    const fallback = ref
-      ? () => gatewayNanoBananaImage(imagePrompt, ref) // retry nano banana — gpt-image-2 negeert de referentie toch
-      : () => gatewayNanoBananaImage(imagePrompt, ref);
     try {
       const dataUrl = await primary();
       return { dataUrl };
     } catch (e1) {
-      console.error("[image] primary image gen failed, retrying:", e1);
+      console.error("[image] gateway failed, retrying nano banana:", e1);
       try {
-        const dataUrl = await fallback();
+        const dataUrl = await gatewayNanoBananaImage(imagePrompt, ref);
         return { dataUrl };
       } catch (e2) {
         console.error("[image] gateway fallback failed too:", e2);
-        // Final fallback: NVIDIA flux.2-klein-4b (uses NVIDIA_API_KEY, no Lovable credits).
+        // 3) Final fallback: NVIDIA flux.
         if (process.env.NVIDIA_API_KEY) {
           try {
             const { generateWithFlux } = await import("./nvidia-flux.server");
