@@ -86,22 +86,33 @@ export async function nvidiaDeepseekChat(messages: ChatTurn[]): Promise<string> 
       .join(" ");
     return { role: m.role, content: text };
   });
-  const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${k}`,
-    },
-    body: JSON.stringify({
-      model: "deepseek-ai/deepseek-v4-flash",
-      messages: flat,
-      max_tokens: 2048,
-      temperature: 0.7,
-    }),
-  });
-  if (!res.ok) throw new Error(`NVIDIA deepseek ${res.status}: ${await res.text()}`);
-  const data = (await res.json()) as any;
-  return data.choices?.[0]?.message?.content ?? "";
+  let lastErr = "";
+  let delay = 800;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${k}`,
+      },
+      body: JSON.stringify({
+        model: "deepseek-ai/deepseek-v4-flash",
+        messages: flat,
+        max_tokens: 2048,
+        temperature: 0.7,
+      }),
+    });
+    if (res.ok) {
+      const data = (await res.json()) as any;
+      return data.choices?.[0]?.message?.content ?? "";
+    }
+    lastErr = `NVIDIA deepseek ${res.status}: ${await res.text()}`;
+    if (res.status !== 503 && res.status !== 429) break;
+    await new Promise((r) => setTimeout(r, delay));
+    delay *= 2;
+  }
+  throw new Error(lastErr);
+
 }
 
 // Nano Banana 2 Lite via directe Gemini API (gebruikt GEMINI_API_KEY).
