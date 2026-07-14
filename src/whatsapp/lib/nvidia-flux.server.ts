@@ -7,8 +7,8 @@ const INFER_URL =
   "https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux.2-klein-4b";
 
 const REFERENCE_IMAGE_URLS = [
-  "https://i.imgur.com/eBVTnWn.png",
-  "https://i.imgur.com/uBf5Tp6.jpeg",
+  "https://i.imgur.com/e9o18Au.jpeg",
+  "https://i.imgur.com/aVca7ZO.jpeg",
 ];
 
 type CachedAsset = { assetId: string; expiresAt: number };
@@ -101,7 +101,7 @@ export async function generateWithFlux(prompt: string): Promise<string> {
     samples: 1,
     seed,
     steps: 4,
-    image: `data:image/png;asset_id,${id1}`,
+    image: `data:image/png;example_id,${id1}`,
   };
 
   const res = await fetch(INFER_URL, {

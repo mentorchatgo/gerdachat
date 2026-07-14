@@ -146,14 +146,16 @@ export const generateContactImage = createServerFn({ method: "POST" })
             return { dataUrl };
           } catch (e3) {
             console.error("[image] NVIDIA flux fallback failed:", e3);
-            throw new Error(
-              `Image gen failed: gateway=${(e1 as Error).message} | retry=${(e2 as Error).message} | nvidia=${(e3 as Error).message}`,
-            );
+            return {
+              dataUrl: "",
+              error: "ik kan nu effe geen foto maken, me foto-ding is op of stuk",
+            };
           }
         }
-        throw new Error(
-          `Image generation failed: ${(e1 as Error).message} | fallback: ${(e2 as Error).message}`,
-        );
+        return {
+          dataUrl: "",
+          error: "ik kan nu effe geen foto maken, me foto-ding is op",
+        };
       }
     }
 
