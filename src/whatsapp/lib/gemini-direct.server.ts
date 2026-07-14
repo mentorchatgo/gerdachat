@@ -113,8 +113,6 @@ export async function nvidiaDeepseekChat(messages: ChatTurn[]): Promise<string> 
   }
   throw new Error(lastErr);
 
-  const data = (await res.json()) as any;
-  return data.choices?.[0]?.message?.content ?? "";
 }
 
 // Nano Banana 2 Lite via directe Gemini API (gebruikt GEMINI_API_KEY).
