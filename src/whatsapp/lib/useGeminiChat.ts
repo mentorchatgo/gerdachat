@@ -456,7 +456,7 @@ export function useGeminiChat(customConfig?: ContactConfig) {
                 const failMsg: ChatMessage = {
                   id: Date.now() + "_img_fail",
                   sender: contactId,
-                  text: imgRes.error || "ik kan nu effe geen foto maken",
+                  text: "error" in imgRes ? imgRes.error : "ik kan nu effe geen foto maken",
                   timestamp: nowStamp(),
                 };
                 setMessagesMap((prev) => ({
