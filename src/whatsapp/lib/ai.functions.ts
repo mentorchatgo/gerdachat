@@ -148,13 +148,13 @@ export const generateContactImage = createServerFn({ method: "POST" })
             console.error("[image] NVIDIA flux fallback failed:", e3);
             return {
               dataUrl: "",
-              error: "ik kan nu effe geen foto maken, me foto-ding is op of stuk",
+              error: "ik kan nu effe geen foto maken, probeer zo nog een keertje",
             };
           }
         }
         return {
           dataUrl: "",
-          error: "ik kan nu effe geen foto maken, me foto-ding is op",
+          error: "ik kan nu effe geen foto maken, probeer zo nog een keertje",
         };
       }
     }
