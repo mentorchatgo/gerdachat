@@ -116,20 +116,14 @@ export async function nvidiaDeepseekChat(messages: ChatTurn[]): Promise<string> 
 }
 
 // Nano Banana 2 Lite via directe Gemini API (gebruikt GEMINI_API_KEY).
-// Ondersteunt optionele referentie-afbeeldingen zodat gezicht/uiterlijk consistent blijft.
+// Gebruikt ALTIJD de twee vaste referentiefoto's van Gerda (ingebakken, geen netwerk nodig).
 export async function generateImageGeminiNanoBanana2Lite(
   prompt: string,
-  referenceUrls: string[] = [],
+  _referenceUrls: string[] = [],
 ): Promise<string> {
+  const { GERDA_REF_INLINE } = await import("./gerda-refs.server");
   const models = ["gemini-3.1-flash-image-lite", "gemini-3.1-flash-image", "gemini-2.5-flash-image-preview"];
-  const parts: any[] = [];
-  for (const url of referenceUrls) {
-    try {
-      parts.push({ inlineData: await urlToInlineData(url) });
-    } catch (e) {
-      console.warn("[gemini-image] ref fetch failed:", (e as Error).message);
-    }
-  }
+  const parts: any[] = GERDA_REF_INLINE.map((r) => ({ inlineData: r }));
   parts.push({ text: prompt });
 
   let lastErr = "";

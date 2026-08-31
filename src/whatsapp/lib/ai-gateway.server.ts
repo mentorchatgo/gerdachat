@@ -39,23 +39,33 @@ export type ChatTurn = {
 export async function gatewayChat(messages: ChatTurn[], _model = "google/gemini-3-flash-preview"): Promise<string> {
   // 1) Direct Gemini API (primary — uses GEMINI_API_KEY, geen Lovable credits).
   if (process.env.GEMINI_API_KEY) {
-    try {
-      const { geminiDirectChat } = await import("./gemini-direct.server");
-      return await geminiDirectChat(messages);
-    } catch (e) {
-      console.warn("[chat] gemini direct failed, falling back to NVIDIA:", (e as Error).message);
-      // 2) NVIDIA deepseek-v4-flash as last resort.
-      if (process.env.NVIDIA_API_KEY) {
-        try {
-          const { nvidiaDeepseekChat } = await import("./gemini-direct.server");
-          return await nvidiaDeepseekChat(messages);
-        } catch (e2) {
-          console.error("[chat] NVIDIA deepseek also failed:", (e2 as Error).message);
-          throw e2;
+    const { geminiDirectChat } = await import("./gemini-direct.server");
+    let lastErr: Error | null = null;
+    let delay = 700;
+    // Meerdere pogingen: NVIDIA mag pas als Gemini écht helemaal niet meer werkt.
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        return await geminiDirectChat(messages);
+      } catch (e) {
+        lastErr = e as Error;
+        console.warn(`[chat] gemini direct attempt ${attempt + 1} failed:`, lastErr.message);
+        if (attempt < 3) {
+          await new Promise((r) => setTimeout(r, delay));
+          delay *= 2;
         }
       }
-      throw e;
     }
+    // 2) NVIDIA deepseek-v4-flash als allerlaatste redmiddel.
+    if (process.env.NVIDIA_API_KEY) {
+      try {
+        const { nvidiaDeepseekChat } = await import("./gemini-direct.server");
+        return await nvidiaDeepseekChat(messages);
+      } catch (e2) {
+        console.error("[chat] NVIDIA deepseek also failed:", (e2 as Error).message);
+        throw e2;
+      }
+    }
+    throw lastErr ?? new Error("Gemini chat failed");
   }
   // Geen GEMINI_API_KEY → NVIDIA fallback.
   if (process.env.NVIDIA_API_KEY) {

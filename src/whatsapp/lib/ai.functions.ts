@@ -102,43 +102,52 @@ const ImageInput = z.object({
   useReference: z.boolean().optional(),
 });
 
+// Vaste look-instructies: exact hetzelfde lichaam en dezelfde kleding in ELKE afbeelding.
+const GERDA_LOOK_LOCK = `
+IDENTITY LOCK (must be followed exactly, every single time):
+- The two attached reference photos ARE the character. Generate the SAME woman: same face, same double chin, same skin tone, same age.
+- She is COMPLETELY BALD: no hair, no wig, no hat, no eyebrows changes. Never add hair.
+- BODY LOCK: always the exact same body — extremely large, plus-size, very wide torso, thick arms and legs, same proportions as the reference photos. Never slimmer, never a different build.
+- CLOTHING LOCK: she ALWAYS wears the exact same outfit — a dark grey/green camouflage-print t-shirt that is too small and rides up over her belly, and blue denim jeans, with black ankle socks. Same clothes in every image, no other outfits.
+- Vertical 9:16 amateur smartphone photo, authentic candid snapshot, natural lighting, no text overlays, no watermarks.`;
+
 export const generateContactImage = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => ImageInput.parse(d))
   .handler(async ({ data }) => {
     const imagePrompt = sanitizeImagePrompt(data.prompt);
     const ref = data.useReference ? GERDA_REFERENCE_IMAGE : undefined;
+    const scenePrompt = `${GERDA_LOOK_LOCK}\n\nScene: ${imagePrompt}`;
 
-    // 1) Primair: Nano Banana 2 Lite via directe Gemini API (GEMINI_API_KEY, geen Lovable credits).
+    // 1) Primair: Nano Banana 2 Lite (gemini-3.1-flash-image-lite) via directe Gemini API.
     if (process.env.GEMINI_API_KEY) {
-      try {
-        const { generateImageGeminiNanoBanana2Lite } = await import("./gemini-direct.server");
-        const { GERDA_REFERENCE_IMAGE_2 } = await import("./ai-gateway.server");
-        const refs = ref ? [ref, GERDA_REFERENCE_IMAGE_2] : [];
-        const scenePrompt = ref
-          ? `CRITICAL: Reference photos show the EXACT character. Generate a new image of the SAME person — same face, COMPLETELY BALD (no hair), same skin tone, same body, same age. Keep identity 100% intact.\n\nScene: ${imagePrompt}\n\nVertical 9:16 amateur smartphone photo, authentic candid, no text.`
-          : imagePrompt;
-        const dataUrl = await generateImageGeminiNanoBanana2Lite(scenePrompt, refs);
-        return { dataUrl };
-      } catch (e) {
-        console.warn("[image] Nano Banana 2 Lite via Gemini API failed, falling back to gateway:", (e as Error).message);
+      const { generateImageGeminiNanoBanana2Lite } = await import("./gemini-direct.server");
+      let delay = 800;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const dataUrl = await generateImageGeminiNanoBanana2Lite(scenePrompt);
+          return { dataUrl };
+        } catch (e) {
+          console.warn(`[image] nano banana 2 lite attempt ${attempt + 1} failed:`, (e as Error).message);
+          if (attempt < 2) {
+            await new Promise((r) => setTimeout(r, delay));
+            delay *= 2;
+          }
+        }
       }
     }
 
-    // 2) Fallback: Lovable AI Gateway (gpt-image-2 / nano-banana-2).
-    const primary = ref
-      ? () => gatewayNanoBananaImage(imagePrompt, ref)
-      : () => gatewayImage(imagePrompt, ref);
+    // 2) Fallback: Lovable AI Gateway.
     try {
-      const dataUrl = await primary();
+      const dataUrl = await gatewayNanoBananaImage(scenePrompt, ref);
       return { dataUrl };
     } catch (e1) {
-      console.error("[image] gateway failed, retrying nano banana:", e1);
+      console.error("[image] gateway nano banana failed:", e1);
       try {
-        const dataUrl = await gatewayNanoBananaImage(imagePrompt, ref);
+        const dataUrl = await gatewayImage(scenePrompt, ref);
         return { dataUrl };
       } catch (e2) {
-        console.error("[image] gateway fallback failed too:", e2);
-        // 3) Final fallback: NVIDIA flux.
+        console.error("[image] gateway gpt-image-2 failed too:", e2);
+        // 3) Allerlaatste redmiddel: NVIDIA flux (alleen als niets anders meer werkt).
         if (process.env.NVIDIA_API_KEY) {
           try {
             const { generateWithFlux } = await import("./nvidia-flux.server");
@@ -158,7 +167,6 @@ export const generateContactImage = createServerFn({ method: "POST" })
         };
       }
     }
-
   });
 
 const TtsInput = z.object({ text: z.string().min(1), voiceName: z.string().optional() });
