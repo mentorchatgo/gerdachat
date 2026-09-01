@@ -343,17 +343,14 @@ export function useGeminiChat(customConfig?: ContactConfig) {
             });
             text = res.text || "";
           } catch (e) {
+            // Alles faalde: left on seen — geen bericht terugsturen.
             console.error("chat error", e);
-            const errMsg: ChatMessage = {
-              id: Date.now() + "_err",
-              sender: contactId,
-              text: "Mijn internet doet kut, stuur je berichtje nog eens.",
-              timestamp: nowStamp(),
-            };
-            setMessagesMap((prev) => ({
-              ...prev,
-              [contactId]: [...(prev[contactId] || []), errMsg],
-            }));
+            setIsTypingMap((p) => ({ ...p, [contactId]: false }));
+            continue;
+          }
+
+          if (!text.trim()) {
+            // Leeg antwoord: left on seen.
             setIsTypingMap((p) => ({ ...p, [contactId]: false }));
             continue;
           }

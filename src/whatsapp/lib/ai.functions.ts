@@ -6,8 +6,6 @@ import {
   gatewayNanoBananaImage,
   sanitizeImagePrompt,
   GERDA_REFERENCE_IMAGE,
-  GatewayPaymentRequiredError,
-  GatewayRateLimitError,
   type ChatTurn,
 } from "./ai-gateway.server";
 
@@ -83,17 +81,9 @@ export const chatTurn = createServerFn({ method: "POST" })
       const text = await gatewayChat(turns);
       return { text };
     } catch (error) {
-      if (error instanceof GatewayPaymentRequiredError) {
-        return {
-          text: "[SYSTEM_ERROR: Lovable AI credits zijn op. Voeg credits toe via Settings → Plans & credits om Gerda weer te laten antwoorden.]",
-        };
-      }
-      if (error instanceof GatewayRateLimitError) {
-        return {
-          text: "[SYSTEM_ERROR: Lovable AI is tijdelijk te druk. Probeer het zo nog eens.]",
-        };
-      }
-      throw error;
+      // Alles faalde (Gemini 3.5 lite, 3.1 lite, NVIDIA): left on seen, geen antwoord.
+      console.error("[chat] all providers failed:", (error as Error)?.message);
+      return { text: "" };
     }
   });
 
