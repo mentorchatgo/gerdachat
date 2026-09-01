@@ -243,6 +243,11 @@ export function useGeminiChat(customConfig?: ContactConfig) {
     load();
   }, []);
 
+  const messagesMapRef = useRef<Record<string, ChatMessage[]>>({});
+  useEffect(() => {
+    messagesMapRef.current = messagesMap;
+  }, [messagesMap]);
+
   useEffect(() => {
     if (!hasLoadedMessages) return;
     set("chat_messagesMap", messagesMap).catch((e) =>
