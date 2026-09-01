@@ -2197,7 +2197,7 @@ export default function App() {
                           }
                         }}
                         placeholder="Bericht"
-                        disabled={isTyping}
+                        
                         rows={1}
                         style={{ caretColor: '#00a884' }}
                         className="bg-transparent border-none outline-none w-full text-[16px] placeholder-[#8696a0] text-[#e9edef] px-1 py-1.5 resize-none overflow-hidden max-h-[100px] leading-relaxed"

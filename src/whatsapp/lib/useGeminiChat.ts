@@ -243,6 +243,11 @@ export function useGeminiChat(customConfig?: ContactConfig) {
     load();
   }, []);
 
+  const messagesMapRef = useRef<Record<string, ChatMessage[]>>({});
+  useEffect(() => {
+    messagesMapRef.current = messagesMap;
+  }, [messagesMap]);
+
   useEffect(() => {
     if (!hasLoadedMessages) return;
     set("chat_messagesMap", messagesMap).catch((e) =>
@@ -312,14 +317,16 @@ export function useGeminiChat(customConfig?: ContactConfig) {
           await new Promise((r) => setTimeout(r, 800));
           setIsTypingMap((p) => ({ ...p, [contactId]: true }));
 
-          // Build conversation snapshot
-          let snapshot: ChatMessage[] = [];
-          setMessagesMap((prev) => {
-            snapshot = prev[contactId] || [];
-            return prev;
-          });
+          // Build conversation snapshot (uit de ref, zodat we altijd de
+          // actuele berichten hebben — een setState-updater levert die niet
+          // synchroon op en gaf hierdoor "geen geheugen").
+          const snapshot: ChatMessage[] = messagesMapRef.current[contactId] || [];
           // Drop the just-appended user message from history (it becomes `message`)
-          const history = buildHistory(snapshot.slice(0, -1), contactId);
+          const trimmed =
+            snapshot.length && snapshot[snapshot.length - 1]?.sender === "user"
+              ? snapshot.slice(0, -1)
+              : snapshot;
+          const history = buildHistory(trimmed, contactId).slice(-60);
           const conf = getContactConfig(contactId);
           const systemPrompt =
             contactId === "gerda"
@@ -524,10 +531,14 @@ export function useGeminiChat(customConfig?: ContactConfig) {
         videoUrl: videoData?.url,
         timestamp: nowStamp(),
       };
-      setMessagesMap((prev) => ({
-        ...prev,
-        [contactId]: [...(prev[contactId] || []), userMsg],
-      }));
+      setMessagesMap((prev) => {
+        const next = {
+          ...prev,
+          [contactId]: [...(prev[contactId] || []), userMsg],
+        };
+        messagesMapRef.current = next;
+        return next;
+      });
 
       if (!queueRef.current[contactId]) queueRef.current[contactId] = [];
 
