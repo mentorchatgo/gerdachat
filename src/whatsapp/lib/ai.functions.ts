@@ -6,8 +6,6 @@ import {
   gatewayNanoBananaImage,
   sanitizeImagePrompt,
   GERDA_REFERENCE_IMAGE,
-  GatewayPaymentRequiredError,
-  GatewayRateLimitError,
   type ChatTurn,
 } from "./ai-gateway.server";
 
