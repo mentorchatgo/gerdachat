@@ -531,10 +531,14 @@ export function useGeminiChat(customConfig?: ContactConfig) {
         videoUrl: videoData?.url,
         timestamp: nowStamp(),
       };
-      setMessagesMap((prev) => ({
-        ...prev,
-        [contactId]: [...(prev[contactId] || []), userMsg],
-      }));
+      setMessagesMap((prev) => {
+        const next = {
+          ...prev,
+          [contactId]: [...(prev[contactId] || []), userMsg],
+        };
+        messagesMapRef.current = next;
+        return next;
+      });
 
       if (!queueRef.current[contactId]) queueRef.current[contactId] = [];
 
