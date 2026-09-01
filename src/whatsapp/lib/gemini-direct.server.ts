@@ -33,8 +33,10 @@ async function urlToInlineData(url: string): Promise<{ mimeType: string; data: s
   return { mimeType, data: btoa(s) };
 }
 
-export async function geminiDirectChat(messages: ChatTurn[]): Promise<string> {
-  const model = "gemini-3-flash-preview";
+export async function geminiDirectChat(
+  messages: ChatTurn[],
+  models: string[] = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"],
+): Promise<string> {
   const sys = messages.find((m) => m.role === "system");
   const rest = messages.filter((m) => m.role !== "system");
   const contents: any[] = [];
