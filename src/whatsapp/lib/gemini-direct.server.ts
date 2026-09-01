@@ -63,18 +63,26 @@ export async function geminiDirectChat(
   if (sys && typeof sys.content === "string") {
     body.systemInstruction = { parts: [{ text: sys.content }] };
   }
-  const url = `${BASE}/models/${model}:generateContent?key=${key()}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    throw new Error(`Gemini direct ${res.status}: ${await res.text()}`);
+  let lastErr = "";
+  for (const model of models) {
+    const url = `${BASE}/models/${model}:generateContent?key=${key()}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      lastErr = `Gemini direct ${model} ${res.status}: ${await res.text()}`;
+      console.warn(lastErr);
+      continue;
+    }
+    const data = (await res.json()) as any;
+    const parts = data?.candidates?.[0]?.content?.parts ?? [];
+    const text = parts.map((p: any) => p.text || "").join("");
+    if (text.trim()) return text;
+    lastErr = `Gemini direct ${model}: empty response`;
   }
-  const data = (await res.json()) as any;
-  const parts = data?.candidates?.[0]?.content?.parts ?? [];
-  return parts.map((p: any) => p.text || "").join("");
+  throw new Error(lastErr || "Gemini direct failed");
 }
 
 export async function nvidiaDeepseekChat(messages: ChatTurn[]): Promise<string> {
