@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { get, set } from "idb-keyval";
 import { MemoryService } from "./memoryService";
 import { chatTurn, generateContactImage, ttsForText } from "./ai.functions";
+import { chatDelayMs, isRealisticDelayEnabled, sleep } from "./realisticDelay";
 
 export interface ChatMessage {
   id: string;
