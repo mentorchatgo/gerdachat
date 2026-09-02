@@ -337,6 +337,8 @@ export default function App() {
   const [showMenuChat, setShowMenuChat] = useState(false);
   const [showMenuPlus, setShowMenuPlus] = useState(false);
   const [showCustomContactSettings, setShowCustomContactSettings] = useState(false);
+  const [realisticDelay, setRealisticDelay] = useState(false);
+  useEffect(() => { setRealisticDelay(isRealisticDelayEnabled()); }, []);
   const [showContactProfile, setShowContactProfile] = useState(false);
   const [isSavingContact, setIsSavingContact] = useState(false);
 
