@@ -1051,6 +1051,13 @@ export default function App() {
                         </div>
                         
                         <div className="px-6 py-4 text-[14px] font-medium text-[#8696a0]">Chatinstellingen</div>
+                        <div className="px-6 py-3.5 flex justify-between items-center cursor-pointer" onClick={() => { const v = !realisticDelay; setRealisticDelay(v); setRealisticDelayEnabled(v); }}>
+                           <div>
+                             <div className="text-[#e9edef] text-[17px]">Realistische reactietijd</div>
+                             <div className="text-[#8696a0] text-[14px] pr-8">Antwoorden komen 5-20 sec later (afhankelijk van de lengte) en oproepen worden pas na 2-10 sec opgenomen</div>
+                           </div>
+                           <input type="checkbox" className="w-5 h-5 accent-[#00a884]" checked={realisticDelay} readOnly />
+                        </div>
                         <div className="px-6 py-3.5 flex justify-between items-center cursor-pointer">
                            <div>
                              <div className="text-[#e9edef] text-[17px]">Verzenden met Enter</div>
