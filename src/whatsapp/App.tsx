@@ -1576,9 +1576,40 @@ export default function App() {
       {viewImageUrl && (
           <div className="absolute inset-0 z-[200] bg-black/90 flex items-center justify-center p-4" onClick={() => setViewImageUrl(null)}>
               <img src={viewImageUrl} alt="Full view" className="max-w-full max-h-full rounded-lg" />
-              <button className="absolute top-4 right-4 text-white p-2">✕</button>
+              <div className="absolute top-4 right-4 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <button
+                  title="Opslaan"
+                  className="text-white p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                  onClick={async () => {
+                    try {
+                      let href = viewImageUrl;
+                      let revoke: string | null = null;
+                      if (!href.startsWith('data:')) {
+                        const res = await fetch(href);
+                        const blob = await res.blob();
+                        href = URL.createObjectURL(blob);
+                        revoke = href;
+                      }
+                      const a = document.createElement('a');
+                      a.href = href;
+                      a.download = `foto-${Date.now()}.${href.includes('image/png') ? 'png' : 'jpg'}`;
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      if (revoke) setTimeout(() => URL.revokeObjectURL(revoke!), 5000);
+                      showToast('Foto opgeslagen');
+                    } catch {
+                      window.open(viewImageUrl, '_blank');
+                    }
+                  }}
+                >
+                  <Download size={22} />
+                </button>
+                <button className="text-white p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors" onClick={() => setViewImageUrl(null)}>✕</button>
+              </div>
           </div>
       )}
+
 
       {/* WhatsApp Desktop Left Rail */}
       <div className="hidden md:flex w-[64px] bg-[var(--color-wa-panel)] flex-col items-center py-3 justify-between h-full shrink-0 z-20">
