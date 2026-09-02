@@ -9,6 +9,7 @@ import { float32ToPCM16, pcm16ToBase64, base64ToPcm16, pcm16ToFloat32 } from './
 import { MemoryService } from './memoryService';
 import { getLiveApiKey } from './ai.functions';
 import { getGerdaSystemPrompt } from './useGeminiChat';
+import { callPickupDelayMs, isRealisticDelayEnabled, sleep } from './realisticDelay';
 
 const IN_SAMPLE_RATE = 16000;
 const OUT_SAMPLE_RATE = 24000;
@@ -197,6 +198,10 @@ export function useLiveCall(customConfig?: { name: string; sysInstruct: string; 
 
       source.connect(processor);
       processor.connect(actx.destination);
+
+      if (isRealisticDelayEnabled()) {
+        await sleep(callPickupDelayMs());
+      }
 
       const { key } = await getLiveApiKey();
       const ai = new GoogleGenAI({ apiKey: key });

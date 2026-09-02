@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { get, set } from "idb-keyval";
 import { MemoryService } from "./memoryService";
 import { chatTurn, generateContactImage, ttsForText } from "./ai.functions";
+import { chatDelayMs, isRealisticDelayEnabled, sleep } from "./realisticDelay";
 
 export interface ChatMessage {
   id: string;
@@ -394,6 +395,10 @@ export function useGeminiChat(customConfig?: ContactConfig) {
             .replace(/\[SEND_PHOTO:[^\]]+\]/gi, "")
             .replace(/\[GENERATE_IMAGE:[^\]]+\]/gi, "")
             .trim();
+
+          if (isRealisticDelayEnabled()) {
+            await sleep(chatDelayMs(cleanText || text));
+          }
 
           if (cleanText) {
             let audioUrl: string | undefined;
