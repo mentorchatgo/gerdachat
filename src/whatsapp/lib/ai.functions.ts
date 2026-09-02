@@ -126,7 +126,19 @@ export const generateContactImage = createServerFn({ method: "POST" })
       }
     }
 
-    // 2) Fallback: Lovable AI Gateway.
+    // 2) Fallback als Nano Banana 2 Lite het helemaal niet meer doet:
+    //    NVIDIA flux.2-klein-4b image editing met dezelfde referentiefoto's en prompt.
+    if (process.env.NVIDIA_API_KEY) {
+      try {
+        const { generateWithFlux } = await import("./nvidia-flux.server");
+        const dataUrl = await generateWithFlux(scenePrompt);
+        return { dataUrl };
+      } catch (e) {
+        console.error("[image] NVIDIA flux fallback failed:", e);
+      }
+    }
+
+    // 3) Allerlaatste redmiddel: Lovable AI Gateway.
     try {
       const dataUrl = await gatewayNanoBananaImage(scenePrompt, ref);
       return { dataUrl };
@@ -137,20 +149,6 @@ export const generateContactImage = createServerFn({ method: "POST" })
         return { dataUrl };
       } catch (e2) {
         console.error("[image] gateway gpt-image-2 failed too:", e2);
-        // 3) Allerlaatste redmiddel: NVIDIA flux (alleen als niets anders meer werkt).
-        if (process.env.NVIDIA_API_KEY) {
-          try {
-            const { generateWithFlux } = await import("./nvidia-flux.server");
-            const dataUrl = await generateWithFlux(imagePrompt);
-            return { dataUrl };
-          } catch (e3) {
-            console.error("[image] NVIDIA flux fallback failed:", e3);
-            return {
-              dataUrl: "",
-              error: "ik kan nu effe geen foto maken, me foto-ding is op of stuk",
-            };
-          }
-        }
         return {
           dataUrl: "",
           error: "ik kan nu effe geen foto maken, me foto-ding is op",
@@ -158,6 +156,7 @@ export const generateContactImage = createServerFn({ method: "POST" })
       }
     }
   });
+
 
 const TtsInput = z.object({ text: z.string().min(1), voiceName: z.string().optional() });
 
