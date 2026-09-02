@@ -51,7 +51,7 @@ const defaultCustomConfig: CustomContactConfig = {
 };
 
 const TypingIndicator = () => (
-  <div className="flex justify-start mt-0.5">
+  <div className="flex justify-start mt-0.5 px-[5%] md:px-[10%]">
     <div className="bg-[var(--color-wa-panel)] text-[#e9edef] px-3 py-2 rounded-lg rounded-tl-none shadow-sm msg-tail-in relative min-w-[50px] flex items-center justify-center gap-1 h-[32px]">
       <motion.div
         animate={{ y: [0, -3, 0] }}

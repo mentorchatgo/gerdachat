@@ -477,6 +477,7 @@ export function useGeminiChat(customConfig?: ContactConfig) {
                   ...prev,
                   [contactId]: [...(prev[contactId] || []), failMsg],
                 }));
+                setIsTypingMap((p) => ({ ...p, [contactId]: false }));
                 continue;
               }
               const imgMsg: ChatMessage = {
