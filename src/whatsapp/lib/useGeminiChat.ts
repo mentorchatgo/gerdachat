@@ -395,6 +395,10 @@ export function useGeminiChat(customConfig?: ContactConfig) {
             .replace(/\[GENERATE_IMAGE:[^\]]+\]/gi, "")
             .trim();
 
+          if (isRealisticDelayEnabled()) {
+            await sleep(chatDelayMs(cleanText || text));
+          }
+
           if (cleanText) {
             let audioUrl: string | undefined;
             let audioDuration: string | undefined;
