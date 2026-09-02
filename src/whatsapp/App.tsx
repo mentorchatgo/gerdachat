@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import { Phone, Video, MoreVertical, Search, Paperclip, Smile, Mic, Send, PhoneOff, ChevronDown, UserPlus, MessageSquare, CircleDashed, Users, Archive, Settings, ArrowLeft, Bell, Lock, Plus, PhoneOutgoing, Key, LayoutList, RotateCw, Accessibility, Globe, HelpCircle, Infinity, PlusCircle, X, Trash2, Copy, Download } from 'lucide-react';
 import { useGeminiChat, chooseVoiceForContact, chooseVoiceAndPrompt } from './lib/useGeminiChat';
+import { isRealisticDelayEnabled, setRealisticDelayEnabled } from './lib/realisticDelay';
 import { useLiveCall } from './lib/useLiveCall';
 import { preloadVideoFrames, globalFrames } from './lib/preloadVideo';
 
