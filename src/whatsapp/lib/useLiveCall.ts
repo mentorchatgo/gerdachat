@@ -198,6 +198,10 @@ export function useLiveCall(customConfig?: { name: string; sysInstruct: string; 
       source.connect(processor);
       processor.connect(actx.destination);
 
+      if (isRealisticDelayEnabled()) {
+        await sleep(callPickupDelayMs());
+      }
+
       const { key } = await getLiveApiKey();
       const ai = new GoogleGenAI({ apiKey: key });
       const mentorName = 'Gerda';
