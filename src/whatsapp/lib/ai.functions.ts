@@ -138,7 +138,7 @@ export const generateContactImage = createServerFn({ method: "POST" })
       }
     }
 
-    // 3) Allerlaatste redmiddel: Lovable AI Gateway.
+    // 3) Daarna: Lovable AI Gateway.
     try {
       const dataUrl = await gatewayNanoBananaImage(scenePrompt, ref);
       return { dataUrl };
@@ -149,12 +149,24 @@ export const generateContactImage = createServerFn({ method: "POST" })
         return { dataUrl };
       } catch (e2) {
         console.error("[image] gateway gpt-image-2 failed too:", e2);
-        return {
-          dataUrl: "",
-          error: "ik kan nu effe geen foto maken, me foto-ding is op",
-        };
       }
     }
+
+    // 4) Allerlaatste redmiddel: FireRed-Image-Edit-1.0-Fast via Hugging Face.
+    if (process.env.HF_API_KEY) {
+      try {
+        const { generateWithFireRed } = await import("./huggingface.server");
+        const dataUrl = await generateWithFireRed(scenePrompt);
+        return { dataUrl };
+      } catch (e3) {
+        console.error("[image] HuggingFace FireRed failed too:", e3);
+      }
+    }
+
+    return {
+      dataUrl: "",
+      error: "ik kan nu effe geen foto maken, me foto-ding is op",
+    };
   });
 
 
