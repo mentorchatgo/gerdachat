@@ -2,10 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import {
   gatewayChat,
-  gatewayImage,
-  gatewayNanoBananaImage,
   sanitizeImagePrompt,
-  GERDA_REFERENCE_IMAGE,
   type ChatTurn,
 } from "./ai-gateway.server";
 
