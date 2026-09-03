@@ -189,38 +189,42 @@ export async function ttsGemini(text: string, voiceName = "Despina"): Promise<{ 
   // Try newer TTS models in order.
   const models = ["gemini-3.1-flash-tts-preview", "gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts"];
   let lastErr: string | undefined;
+  const apiKeys = keys();
   for (const model of models) {
-    try {
-      const url = `${BASE}/models/${model}:generateContent?key=${key()}`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text }] }],
-          generationConfig: {
-            responseModalities: ["AUDIO"],
-            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } },
-          },
-        }),
-      });
-      if (!res.ok) {
-        lastErr = `${model} ${res.status}: ${await res.text()}`;
-        continue;
+    for (const apiKey of apiKeys) {
+      try {
+        const url = `${BASE}/models/${model}:generateContent?key=${apiKey}`;
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text }] }],
+            generationConfig: {
+              responseModalities: ["AUDIO"],
+              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } },
+            },
+          }),
+        });
+        if (!res.ok) {
+          lastErr = `${model} ${res.status}`;
+          console.warn(lastErr, await res.text());
+          continue;
+        }
+        const data = (await res.json()) as any;
+        const parts = data?.candidates?.[0]?.content?.parts ?? [];
+        const inline = parts.find((p: any) => (p.inlineData || p.inline_data)?.data);
+        const b64 = (inline?.inlineData || inline?.inline_data)?.data;
+        if (!b64) {
+          lastErr = `${model}: no audio in response`;
+          continue;
+        }
+        const { dataUrl, durationSec } = pcm16Base64ToWavDataUrl(b64, 24000);
+        const m = Math.floor(durationSec / 60);
+        const s = Math.floor(durationSec % 60);
+        return { dataUrl, duration: `${m}:${s < 10 ? "0" : ""}${s}` };
+      } catch (e: any) {
+        lastErr = `${model}: ${e?.message || e}`;
       }
-      const data = (await res.json()) as any;
-      const parts = data?.candidates?.[0]?.content?.parts ?? [];
-      const inline = parts.find((p: any) => (p.inlineData || p.inline_data)?.data);
-      const b64 = (inline?.inlineData || inline?.inline_data)?.data;
-      if (!b64) {
-        lastErr = `${model}: no audio in response`;
-        continue;
-      }
-      const { dataUrl, durationSec } = pcm16Base64ToWavDataUrl(b64, 24000);
-      const m = Math.floor(durationSec / 60);
-      const s = Math.floor(durationSec % 60);
-      return { dataUrl, duration: `${m}:${s < 10 ? "0" : ""}${s}` };
-    } catch (e: any) {
-      lastErr = `${model}: ${e?.message || e}`;
     }
   }
   throw new Error(`Gemini TTS failed: ${lastErr}`);
