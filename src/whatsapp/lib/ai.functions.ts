@@ -105,61 +105,22 @@ export const generateContactImage = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => ImageInput.parse(d))
   .handler(async ({ data }) => {
     const imagePrompt = sanitizeImagePrompt(data.prompt);
-    const ref = data.useReference ? GERDA_REFERENCE_IMAGE : undefined;
     const scenePrompt = `${GERDA_LOOK_LOCK}\n\nScene: ${imagePrompt}`;
 
-    // 1) Primair: Nano Banana 2 Lite (gemini-3.1-flash-image-lite) via directe Gemini API.
-    if (process.env.GEMINI_API_KEY) {
-      const { generateImageGeminiNanoBanana2Lite } = await import("./gemini-direct.server");
-      let delay = 800;
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-          const dataUrl = await generateImageGeminiNanoBanana2Lite(scenePrompt);
-          return { dataUrl };
-        } catch (e) {
-          console.warn(`[image] nano banana 2 lite attempt ${attempt + 1} failed:`, (e as Error).message);
-          if (attempt < 2) {
-            await new Promise((r) => setTimeout(r, delay));
-            delay *= 2;
-          }
-        }
-      }
-    }
-
-    // 2) Fallback als Nano Banana 2 Lite het helemaal niet meer doet:
-    //    NVIDIA flux.2-klein-4b image editing met dezelfde referentiefoto's en prompt.
-    if (process.env.NVIDIA_API_KEY) {
+    // Alles via Google AI Studio: Nano Banana 2 Lite (gemini-3.1-flash-image-lite)
+    // met automatische fallback naar de andere Gemini image-modellen en meerdere API-sleutels.
+    const { generateImageGeminiNanoBanana2Lite } = await import("./gemini-direct.server");
+    let delay = 800;
+    for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const { generateWithFlux } = await import("./nvidia-flux.server");
-        const dataUrl = await generateWithFlux(scenePrompt);
+        const dataUrl = await generateImageGeminiNanoBanana2Lite(scenePrompt);
         return { dataUrl };
       } catch (e) {
-        console.error("[image] NVIDIA flux fallback failed:", e);
-      }
-    }
-
-    // 3) Daarna: Lovable AI Gateway.
-    try {
-      const dataUrl = await gatewayNanoBananaImage(scenePrompt, ref);
-      return { dataUrl };
-    } catch (e1) {
-      console.error("[image] gateway nano banana failed:", e1);
-      try {
-        const dataUrl = await gatewayImage(scenePrompt, ref);
-        return { dataUrl };
-      } catch (e2) {
-        console.error("[image] gateway gpt-image-2 failed too:", e2);
-      }
-    }
-
-    // 4) Allerlaatste redmiddel: FireRed-Image-Edit-1.0-Fast via Hugging Face.
-    if (process.env.HF_API_KEY) {
-      try {
-        const { generateWithFireRed } = await import("./huggingface.server");
-        const dataUrl = await generateWithFireRed(scenePrompt);
-        return { dataUrl };
-      } catch (e3) {
-        console.error("[image] HuggingFace FireRed failed too:", e3);
+        console.warn(`[image] gemini image attempt ${attempt + 1} failed:`, (e as Error).message);
+        if (attempt < 2) {
+          await new Promise((r) => setTimeout(r, delay));
+          delay *= 2;
+        }
       }
     }
 
