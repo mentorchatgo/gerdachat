@@ -18,9 +18,6 @@ function keys(): string[] {
   return list;
 }
 
-function key(): string {
-  return keys()[0];
-}
 
 type ChatPart =
   | { type: "text"; text: string }
