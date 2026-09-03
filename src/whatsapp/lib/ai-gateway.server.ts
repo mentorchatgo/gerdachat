@@ -37,104 +37,23 @@ export type ChatTurn = {
 };
 
 export async function gatewayChat(messages: ChatTurn[], _model = "google/gemini-3-flash-preview"): Promise<string> {
-  // 1) Direct Gemini API (primary — uses GEMINI_API_KEY, geen Lovable credits).
-  if (process.env.GEMINI_API_KEY) {
-    const { geminiDirectChat } = await import("./gemini-direct.server");
-    let lastErr: Error | null = null;
-    let delay = 700;
-    // Meerdere pogingen: NVIDIA mag pas als Gemini écht helemaal niet meer werkt.
-    for (let attempt = 0; attempt < 4; attempt++) {
-      try {
-        return await geminiDirectChat(messages);
-      } catch (e) {
-        lastErr = e as Error;
-        console.warn(`[chat] gemini direct attempt ${attempt + 1} failed:`, lastErr.message);
-        if (attempt < 3) {
-          await new Promise((r) => setTimeout(r, delay));
-          delay *= 2;
-        }
+  // Alles gaat via Google AI Studio (Gemini API) met meerdere fallback-sleutels.
+  const { geminiDirectChat } = await import("./gemini-direct.server");
+  let lastErr: Error | null = null;
+  let delay = 700;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      return await geminiDirectChat(messages);
+    } catch (e) {
+      lastErr = e as Error;
+      console.warn(`[chat] gemini direct attempt ${attempt + 1} failed:`, lastErr.message);
+      if (attempt < 3) {
+        await new Promise((r) => setTimeout(r, delay));
+        delay *= 2;
       }
     }
-    // 2) NVIDIA deepseek-v4-flash als allerlaatste redmiddel.
-    if (process.env.NVIDIA_API_KEY) {
-      try {
-        const { nvidiaDeepseekChat } = await import("./gemini-direct.server");
-        return await nvidiaDeepseekChat(messages);
-      } catch (e2) {
-        console.error("[chat] NVIDIA deepseek also failed:", (e2 as Error).message);
-        throw e2;
-      }
-    }
-    throw lastErr ?? new Error("Gemini chat failed");
   }
-  // Geen GEMINI_API_KEY → NVIDIA fallback.
-  if (process.env.NVIDIA_API_KEY) {
-    const { nvidiaDeepseekChat } = await import("./gemini-direct.server");
-    return await nvidiaDeepseekChat(messages);
-  }
-  throw new Error("Missing GEMINI_API_KEY and NVIDIA_API_KEY");
-}
-
-
-// Vaste referentiefoto's voor Gerda — gebruikt om gezicht/uiterlijk consistent te houden.
-export const GERDA_REFERENCE_IMAGE = "https://i.imgur.com/e9o18Au.jpeg";
-export const GERDA_REFERENCE_IMAGE_2 = "https://i.imgur.com/aVca7ZO.jpeg";
-export const GERDA_REFERENCE_IMAGES = [GERDA_REFERENCE_IMAGE, GERDA_REFERENCE_IMAGE_2];
-
-export async function gatewayImage(prompt: string, referenceUrl?: string): Promise<string> {
-  const safePrompt = sanitizeImagePrompt(prompt);
-  const refLine = referenceUrl
-    ? ` The subject's face, hair (completely bald, no hair), body shape and overall look must stay CONSISTENT with the reference character portraits at ${GERDA_REFERENCE_IMAGE} and ${GERDA_REFERENCE_IMAGE_2} (same woman, same bald head, same face, same body type in every image).`
-    : "";
-  return requestGatewayImage(
-    {
-      model: "openai/gpt-image-2",
-      prompt: safePrompt + refLine,
-      quality: "low",
-      size: "1024x1536",
-      n: 1,
-    },
-    "Gateway image gpt-image-2",
-  );
-}
-
-export async function gatewayNanoBananaImage(prompt: string, referenceUrl?: string): Promise<string> {
-  const safePrompt = sanitizeImagePrompt(prompt);
-  const refUrls = referenceUrl ? [referenceUrl, GERDA_REFERENCE_IMAGE_2] : GERDA_REFERENCE_IMAGES;
-  const content: any[] = [
-    ...refUrls.map((url) => ({ type: "image_url", image_url: { url } })),
-    {
-      type: "text",
-      text:
-        "CRITICAL: The attached photos ARE the character (multiple reference photos of the SAME person). You MUST generate a new image of the EXACT SAME person from those photos — same face shape, COMPLETELY BALD HEAD (no hair at all), same skin tone, same chin, same body, same age, same gender, same overall look. Do NOT invent a different person and do NOT add hair. Treat this as image editing / character consistency: keep the identity from the reference photos 100% intact, but place this same bald person in the new scene described below.\n\nScene: " +
-        safePrompt +
-        "\n\nVertical 9:16 amateur smartphone photo, authentic everyday candid, not a studio photo, no text overlays.",
-    },
-  ];
-  return requestGatewayImage(
-    {
-      model: "google/gemini-3.1-flash-image",
-      messages: [{ role: "user", content }],
-      modalities: ["image", "text"],
-    },
-    "Gateway image nano-banana-2",
-  );
-}
-
-async function requestGatewayImage(body: Record<string, unknown>, label: string): Promise<string> {
-  const res = await fetch(`${BASE}/images/generations`, {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`${label} error ${res.status}: ${txt}`);
-  }
-  const data = await res.json();
-  const b64 = data.data?.[0]?.b64_json;
-  if (!b64) throw new Error(`${label} returned no image data`);
-  return `data:image/png;base64,${b64}`;
+  throw lastErr ?? new Error("Gemini chat failed");
 }
 
 export function sanitizeImagePrompt(prompt: string): string {
