@@ -3,10 +3,23 @@
 
 const BASE = "https://generativelanguage.googleapis.com/v1beta";
 
+function keys(): string[] {
+  const list: string[] = [];
+  const primary = process.env.GEMINI_API_KEY;
+  if (primary) list.push(primary);
+  const fallbacks = process.env.GEMINI_API_KEYS_FALLBACK;
+  if (fallbacks) {
+    for (const k of fallbacks.split(/[,\s]+/)) {
+      const t = k.trim();
+      if (t && !list.includes(t)) list.push(t);
+    }
+  }
+  if (!list.length) throw new Error("Missing GEMINI_API_KEY");
+  return list;
+}
+
 function key(): string {
-  const k = process.env.GEMINI_API_KEY;
-  if (!k) throw new Error("Missing GEMINI_API_KEY");
-  return k;
+  return keys()[0];
 }
 
 type ChatPart =
