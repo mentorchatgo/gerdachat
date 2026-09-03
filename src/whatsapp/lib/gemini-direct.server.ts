@@ -101,47 +101,7 @@ export async function geminiDirectChat(
   throw new Error(lastErr || "Gemini direct failed");
 }
 
-export async function nvidiaDeepseekChat(messages: ChatTurn[]): Promise<string> {
-  const k = process.env.NVIDIA_API_KEY;
-  if (!k) throw new Error("Missing NVIDIA_API_KEY");
-  // NVIDIA NIM accepts only text content; strip non-text parts.
-  const flat = messages.map((m) => {
-    if (typeof m.content === "string") return { role: m.role, content: m.content };
-    const text = m.content
-      .map((p) => (p.type === "text" ? p.text : p.type === "image_url" ? "[afbeelding]" : "[audio]"))
-      .join(" ");
-    return { role: m.role, content: text };
-  });
-  let lastErr = "";
-  let delay = 800;
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${k}`,
-      },
-      body: JSON.stringify({
-        model: "deepseek-ai/deepseek-v4-flash",
-        messages: flat,
-        max_tokens: 2048,
-        temperature: 0.7,
-      }),
-    });
-    if (res.ok) {
-      const data = (await res.json()) as any;
-      return data.choices?.[0]?.message?.content ?? "";
-    }
-    lastErr = `NVIDIA deepseek ${res.status}: ${await res.text()}`;
-    if (res.status !== 503 && res.status !== 429) break;
-    await new Promise((r) => setTimeout(r, delay));
-    delay *= 2;
-  }
-  throw new Error(lastErr);
-
-}
-
-// Nano Banana 2 Lite via directe Gemini API (gebruikt GEMINI_API_KEY).
+// Nano Banana 2 Lite via directe Gemini API (Google AI Studio).
 // Gebruikt ALTIJD de twee vaste referentiefoto's van Gerda (ingebakken, geen netwerk nodig).
 export async function generateImageGeminiNanoBanana2Lite(
   prompt: string,
@@ -153,30 +113,34 @@ export async function generateImageGeminiNanoBanana2Lite(
   parts.push({ text: prompt });
 
   let lastErr = "";
+  const apiKeys = keys();
   for (const model of models) {
-    const url = `${BASE}/models/${model}:generateContent?key=${key()}`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts }],
-        generationConfig: { responseModalities: ["IMAGE"] },
-      }),
-    });
-    if (!res.ok) {
-      lastErr = `${model} ${res.status}: ${await res.text()}`;
-      continue;
-    }
-    const data = (await res.json()) as any;
-    const outParts = data?.candidates?.[0]?.content?.parts ?? [];
-    for (const p of outParts) {
-      const inline = p.inlineData || p.inline_data;
-      if (inline?.data) {
-        const mime = inline.mimeType || inline.mime_type || "image/png";
-        return `data:${mime};base64,${inline.data}`;
+    for (const apiKey of apiKeys) {
+      const url = `${BASE}/models/${model}:generateContent?key=${apiKey}`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts }],
+          generationConfig: { responseModalities: ["IMAGE"] },
+        }),
+      });
+      if (!res.ok) {
+        lastErr = `${model} ${res.status}`;
+        console.warn(lastErr, await res.text());
+        continue;
       }
+      const data = (await res.json()) as any;
+      const outParts = data?.candidates?.[0]?.content?.parts ?? [];
+      for (const p of outParts) {
+        const inline = p.inlineData || p.inline_data;
+        if (inline?.data) {
+          const mime = inline.mimeType || inline.mime_type || "image/png";
+          return `data:${mime};base64,${inline.data}`;
+        }
+      }
+      lastErr = `${model}: no inlineData in response`;
     }
-    lastErr = `${model}: no inlineData in response`;
   }
   throw new Error(`Gemini image failed: ${lastErr}`);
 }
