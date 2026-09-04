@@ -411,10 +411,13 @@ export function useGeminiChat(customConfig?: ContactConfig) {
           const photoMatch = text.match(/\[SEND_PHOTO:\s*([a-z_]+)\]/i);
           // Parse [GENERATE_IMAGE: prompt]
           const genMatch = text.match(/\[GENERATE_IMAGE:\s*([^\]]+)\]/i);
+          // Parse [SEND_VIDEO: id]
+          const videoMatch = text.match(/\[SEND_VIDEO:\s*([a-z0-9_]+)\]/i);
 
           let cleanText = text
             .replace(/\[REMEMBER:[^\]]+\]/gi, "")
             .replace(/\[SEND_PHOTO:[^\]]+\]/gi, "")
+            .replace(/\[SEND_VIDEO:[^\]]+\]/gi, "")
             .replace(/\[GENERATE_IMAGE:[^\]]+\]/gi, "")
             .trim();
 
