@@ -105,7 +105,7 @@ export async function generateImageGeminiNanoBanana2Lite(
   _referenceUrls: string[] = [],
 ): Promise<string> {
   const { GERDA_REF_INLINE } = await import("./gerda-refs.server");
-  const models = ["gemini-3.1-flash-image-lite", "gemini-3.1-flash-image", "gemini-2.5-flash-image-preview"];
+  const models = ["gemini-3.1-flash-lite-image", "gemini-3.1-flash-image", "gemini-2.5-flash-image"];
   const parts: any[] = GERDA_REF_INLINE.map((r) => ({ inlineData: r }));
   parts.push({ text: prompt });
 
