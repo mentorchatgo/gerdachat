@@ -426,6 +426,88 @@ export function useGeminiChat(customConfig?: ContactConfig) {
             await sleep(chatDelayMs(cleanText || text));
           }
 
+          // [GENERATE_IMAGE]: EERST de foto genereren, dan pas het berichtje
+          // erbij schrijven (de AI "ziet" de foto), en beide in ÉÉN chatbubbel
+          // sturen. Mislukt de foto? Dan weigert ze de aanvraag — geen foto.
+          if (genMatch) {
+            try {
+              const variations = [
+                "shot from slightly above, soft window light",
+                "low-angle phone selfie, warm indoor lighting",
+                "mirror selfie, harsh flash, motion blur",
+                "extreme close-up, fish-eye distortion, fluorescent light",
+                "wide shot in a kitchen, daylight, slightly out of focus",
+                "blurry walking selfie, evening street lights",
+                "candid shot from the side, no eye contact, soft shadows",
+                "overexposed selfie, bright sunlight outdoors",
+              ];
+              const variation =
+                variations[Math.floor(Math.random() * variations.length)];
+              const styleHint =
+                contactId === "gerda"
+                  ? `Realistic amateur phone photo of the SAME fictional plus-size middle-aged Dutch woman as in the reference photo (https://i.imgur.com/e9o18Au.jpeg) — her face, hair color, hairstyle and body shape must stay consistent with that reference in every image, like the same person photographed in a new situation. ${variation}, vertical 9:16 framing, authentic imperfect smartphone quality, warm non-mocking everyday candid photo, no minors, no explicit or sexual content, not a studio photo.`
+                  : `Realistic casual amateur smartphone photo, ${variation}, vertical 9:16, authentic imperfect quality.`;
+              const fullPrompt = `${genMatch[1].trim()}. ${styleHint}`;
+              const imgRes = await generateContactImage({
+                data: { prompt: fullPrompt, useReference: contactId === "gerda" },
+              });
+              if (!imgRes.dataUrl) {
+                // Foto-generator werkt niet: geen foto sturen en de
+                // foto-aanvraag weigeren in haar eigen stijl.
+                const failMsg: ChatMessage = {
+                  id: Date.now() + "_img_fail",
+                  sender: contactId,
+                  text: "nee wil geen foto sture, vraag nergens om",
+                  timestamp: nowStamp(),
+                };
+                setMessagesMap((prev) => ({
+                  ...prev,
+                  [contactId]: [...(prev[contactId] || []), failMsg],
+                }));
+                setIsTypingMap((p) => ({ ...p, [contactId]: false }));
+                continue;
+              }
+              // Foto is klaar: laat de AI nu pas het bijbehorende berichtje
+              // schrijven, mét de foto zichtbaar voor haar.
+              let caption = "";
+              try {
+                const capRes = await chatTurn({
+                  data: {
+                    systemPrompt,
+                    history,
+                    message:
+                      "(Je hebt deze foto ZELF net gemaakt en stuurt hem nu naar de gebruiker — de foto en jouw berichtje komen samen in één chatbubbel. Kijk goed naar de foto en schrijf één kort berichtje erbij (max 1-2 korte zinnen), alsof je zegt wat je aan het doen bent of wat er op de foto staat. Gebruik GEEN tags zoals [GENERATE_IMAGE], alleen gewone tekst.)",
+                    imageDataUrl: imgRes.dataUrl,
+                  },
+                });
+                caption = (capRes.text || "")
+                  .replace(/\[REMEMBER:[^\]]+\]/gi, "")
+                  .replace(/\[SEND_PHOTO:[^\]]+\]/gi, "")
+                  .replace(/\[SEND_VIDEO:[^\]]+\]/gi, "")
+                  .replace(/\[GENERATE_IMAGE:[^\]]+\]/gi, "")
+                  .replace(/\[SYSTEM_ERROR:[^\]]+\]/gi, "")
+                  .trim();
+              } catch (e) {
+                console.error("caption gen failed", e);
+              }
+              const imgMsg: ChatMessage = {
+                id: Date.now() + "_i",
+                sender: contactId,
+                text: caption || cleanText || "",
+                imageUrl: imgRes.dataUrl,
+                timestamp: nowStamp(),
+              };
+              setMessagesMap((prev) => ({
+                ...prev,
+                [contactId]: [...(prev[contactId] || []), imgMsg],
+              }));
+            } catch (e) {
+              console.error("image gen failed", e);
+            }
+            setIsTypingMap((p) => ({ ...p, [contactId]: false }));
+            continue;
+          }
+
           if (cleanText) {
             let audioUrl: string | undefined;
             let audioDuration: string | undefined;
