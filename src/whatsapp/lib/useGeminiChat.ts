@@ -535,7 +535,7 @@ export function useGeminiChat(customConfig?: ContactConfig) {
             }
           }
 
-          if (!cleanText && !photoMatch && !genMatch) {
+          if (!cleanText && !photoMatch && !genMatch && !videoMatch) {
             const fb: ChatMessage = {
               id: Date.now() + "_fb",
               sender: contactId,
