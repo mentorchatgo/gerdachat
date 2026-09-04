@@ -453,6 +453,20 @@ export function useGeminiChat(customConfig?: ContactConfig) {
             }));
           }
 
+          if (videoMatch && REAL_VIDEOS[videoMatch[1].toLowerCase()]) {
+            const vidMsg: ChatMessage = {
+              id: Date.now() + "_v",
+              sender: contactId,
+              text: "",
+              videoUrl: REAL_VIDEOS[videoMatch[1].toLowerCase()],
+              timestamp: nowStamp(),
+            };
+            setMessagesMap((prev) => ({
+              ...prev,
+              [contactId]: [...(prev[contactId] || []), vidMsg],
+            }));
+          }
+
           if (photoMatch) {
             const url = REAL_PHOTOS[photoMatch[1]] || REAL_PHOTOS.foto_macdonalds;
             const photoMsg: ChatMessage = {
