@@ -563,62 +563,9 @@ export function useGeminiChat(customConfig?: ContactConfig) {
               ...prev,
               [contactId]: [...(prev[contactId] || []), photoMsg],
             }));
-          } else if (genMatch) {
-            try {
-              const variations = [
-                "shot from slightly above, soft window light",
-                "low-angle phone selfie, warm indoor lighting",
-                "mirror selfie, harsh flash, motion blur",
-                "extreme close-up, fish-eye distortion, fluorescent light",
-                "wide shot in a kitchen, daylight, slightly out of focus",
-                "blurry walking selfie, evening street lights",
-                "candid shot from the side, no eye contact, soft shadows",
-                "overexposed selfie, bright sunlight outdoors",
-              ];
-              const variation =
-                variations[Math.floor(Math.random() * variations.length)];
-              const styleHint =
-                contactId === "gerda"
-                  ? `Realistic amateur phone photo of the SAME fictional plus-size middle-aged Dutch woman as in the reference photo (https://i.imgur.com/e9o18Au.jpeg) — her face, hair color, hairstyle and body shape must stay consistent with that reference in every image, like the same person photographed in a new situation. ${variation}, vertical 9:16 framing, authentic imperfect smartphone quality, warm non-mocking everyday candid photo, no minors, no explicit or sexual content, not a studio photo.`
-                  : `Realistic casual amateur smartphone photo, ${variation}, vertical 9:16, authentic imperfect quality.`;
-              const fullPrompt = `${genMatch[1].trim()}. ${styleHint}`;
-              const imgRes = await generateContactImage({
-                data: { prompt: fullPrompt, useReference: contactId === "gerda" },
-              });
-              if (!imgRes.dataUrl) {
-                const failMsg: ChatMessage = {
-                  id: Date.now() + "_img_fail",
-                  sender: contactId,
-                  text:
-                    "error" in imgRes && imgRes.error
-                      ? imgRes.error
-                      : "ik kan nu effe geen foto maken",
-                  timestamp: nowStamp(),
-                };
-                setMessagesMap((prev) => ({
-                  ...prev,
-                  [contactId]: [...(prev[contactId] || []), failMsg],
-                }));
-                setIsTypingMap((p) => ({ ...p, [contactId]: false }));
-                continue;
-              }
-              const imgMsg: ChatMessage = {
-                id: Date.now() + "_i",
-                sender: contactId,
-                text: "",
-                imageUrl: imgRes.dataUrl,
-                timestamp: nowStamp(),
-              };
-              setMessagesMap((prev) => ({
-                ...prev,
-                [contactId]: [...(prev[contactId] || []), imgMsg],
-              }));
-            } catch (e) {
-              console.error("image gen failed", e);
-            }
           }
 
-          if (!cleanText && !photoMatch && !genMatch && !videoMatch) {
+          if (!cleanText && !photoMatch && !videoMatch) {
             const fb: ChatMessage = {
               id: Date.now() + "_fb",
               sender: contactId,
