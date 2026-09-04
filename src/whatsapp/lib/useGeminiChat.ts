@@ -32,6 +32,17 @@ const REAL_PHOTOS: Record<string, string> = {
   foto_kont: "https://i.imgur.com/VNHGb8G.jpeg",
 };
 
+const REAL_VIDEOS: Record<string, string> = {
+  video_buikje_slaan: "https://i.imgur.com/P1Ds70E.mp4",
+  video_huilen_dikzak: "https://i.imgur.com/WjrgIM3.mp4",
+  video_dansen_mcdonalds: "https://i.imgur.com/4zayLLw.mp4",
+  video_ik_wil_mcdonalds: "https://i.imgur.com/1FbMiqA.mp4",
+  video_saus_hamburgers: "https://i.imgur.com/lUSJMp2.mp4",
+  video_berg_eten: "https://i.imgur.com/JA0PQ0L.mp4",
+  video_geweer: "https://i.imgur.com/CDTZSIR.mp4",
+  video_hamburger_hoofd_staren: "https://i.imgur.com/5xHG0O8.mp4",
+};
+
 const nowStamp = () =>
   new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
