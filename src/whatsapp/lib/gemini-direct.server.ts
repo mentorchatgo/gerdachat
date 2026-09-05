@@ -103,33 +103,61 @@ export async function geminiDirectChat(
   throw new Error(lastErr || "Gemini direct failed");
 }
 
-// Nano Banana 2 Lite via directe Gemini API (Google AI Studio).
-// Gebruikt ALTIJD de twee vaste referentiefoto's van Gerda (ingebakken, geen netwerk nodig).
+// Afbeeldingen via Google AI Studio (Gemini image-modellen).
+// Probeert per sleutel alle image-modellen; sleutels worden in willekeurige
+// volgorde gebruikt zodat de belasting over alle sleutels verdeeld wordt.
+const IMAGE_MODELS = [
+  "gemini-3.1-flash-lite-image",
+  "gemini-3.1-flash-image",
+  "gemini-3.1-flash-image-preview",
+  "gemini-2.5-flash-image",
+  "gemini-3-pro-image",
+];
+
+function shuffled<T>(arr: T[]): T[] {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 export async function generateImageGeminiNanoBanana2Lite(
   prompt: string,
   _referenceUrls: string[] = [],
 ): Promise<string> {
   const { GERDA_REF_INLINE } = await import("./gerda-refs.server");
-  const models = ["gemini-3.1-flash-lite-image", "gemini-3.1-flash-image", "gemini-2.5-flash-image"];
   const parts: any[] = GERDA_REF_INLINE.map((r) => ({ inlineData: r }));
   parts.push({ text: prompt });
 
+  const body = JSON.stringify({
+    contents: [{ role: "user", parts }],
+    generationConfig: { responseModalities: ["IMAGE"] },
+  });
+
+  const apiKeys = shuffled(imageKeys());
   let lastErr = "";
-  const apiKeys = imageKeys();
-  for (const model of models) {
-    for (const apiKey of apiKeys) {
-      const url = `${BASE}/models/${model}:generateContent?key=${apiKey}`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts }],
-          generationConfig: { responseModalities: ["IMAGE"] },
-        }),
-      });
+
+  for (const apiKey of apiKeys) {
+    for (const model of IMAGE_MODELS) {
+      let res: Response;
+      try {
+        res = await fetch(`${BASE}/models/${model}:generateContent?key=${apiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+        });
+      } catch (e: any) {
+        lastErr = `${model}: network ${e?.message || e}`;
+        continue;
+      }
       if (!res.ok) {
+        const txt = await res.text().catch(() => "");
         lastErr = `${model} ${res.status}`;
-        console.warn(lastErr, await res.text());
+        console.warn("[image]", lastErr, txt.slice(0, 200));
+        // 400/404 = model bestaat niet of prompt geweigerd -> volgend model.
+        // 429/5xx = quota of storing -> volgende sleutel/model.
         continue;
       }
       const data = (await res.json()) as any;
@@ -141,7 +169,7 @@ export async function generateImageGeminiNanoBanana2Lite(
           return `data:${mime};base64,${inline.data}`;
         }
       }
-      lastErr = `${model}: no inlineData in response`;
+      lastErr = `${model}: geen afbeelding in antwoord`;
     }
   }
   throw new Error(`Gemini image failed: ${lastErr}`);
@@ -149,6 +177,7 @@ export async function generateImageGeminiNanoBanana2Lite(
 
 // Backwards-compat alias.
 export const generateImageGemini = (prompt: string) => generateImageGeminiNanoBanana2Lite(prompt, []);
+
 
 // PCM16 mono @ sampleRate to base64 WAV (data URL). Worker-safe.
 function pcm16Base64ToWavDataUrl(pcmB64: string, sampleRate = 24000): { dataUrl: string; durationSec: number } {
