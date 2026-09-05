@@ -103,11 +103,12 @@ export async function geminiDirectChat(
   throw new Error(lastErr || "Gemini direct failed");
 }
 
-// Afbeeldingen via Google AI Studio (Gemini image-modellen).
-// Probeert per sleutel alle image-modellen; sleutels worden in willekeurige
-// volgorde gebruikt zodat de belasting over alle sleutels verdeeld wordt.
+// Afbeeldingen via Google AI Studio.
+// Hoofdmodel: gemini-3.1-flash-lite-image (Nano Banana 2 Flash Lite) — werkt altijd.
+// De rest is alleen reserve. Sleutels worden in willekeurige volgorde gebruikt
+// zodat de belasting over alle sleutels verdeeld wordt.
 const IMAGE_MODELS = [
-  "gemini-3.1-flash-lite-image",
+  "gemini-3.1-flash-lite-image", // Nano Banana 2 Flash Lite (primair)
   "gemini-3.1-flash-image",
   "gemini-3.1-flash-image-preview",
   "gemini-2.5-flash-image",
