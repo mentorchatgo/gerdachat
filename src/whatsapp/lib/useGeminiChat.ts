@@ -452,21 +452,44 @@ export function useGeminiChat(customConfig?: ContactConfig) {
                 data: { prompt: fullPrompt, useReference: contactId === "gerda" },
               });
               if (!imgRes.dataUrl) {
-                // Foto-generator werkt niet: geen foto sturen en de
-                // foto-aanvraag weigeren in haar eigen stijl.
-                const failMsg: ChatMessage = {
-                  id: Date.now() + "_img_fail",
-                  sender: contactId,
-                  text: "nee wil geen foto sture, vraag nergens om",
-                  timestamp: nowStamp(),
-                };
-                setMessagesMap((prev) => ({
-                  ...prev,
-                  [contactId]: [...(prev[contactId] || []), failMsg],
-                }));
+                // Foto-generator werkt niet: laat haar ZELF een uniek
+                // weigerberichtje schrijven in haar eigen stijl.
+                let refusal = "";
+                try {
+                  const refRes = await chatTurn({
+                    data: {
+                      systemPrompt,
+                      history,
+                      message:
+                        "(Je hebt nu even geen zin om een foto te sturen. Schrijf één kort, uniek berichtje in jouw eigen stijl waarin je zegt dat je nu geen foto stuurt. Verzin elke keer iets anders, noem NOOIT technische dingen zoals camera stuk, internet, app of AI. Geen tags, alleen gewone tekst.)",
+                    },
+                  });
+                  refusal = (refRes.text || "")
+                    .replace(/\[REMEMBER:[^\]]+\]/gi, "")
+                    .replace(/\[SEND_PHOTO:[^\]]+\]/gi, "")
+                    .replace(/\[SEND_VIDEO:[^\]]+\]/gi, "")
+                    .replace(/\[GENERATE_IMAGE:[^\]]+\]/gi, "")
+                    .replace(/\[SYSTEM_ERROR:[^\]]+\]/gi, "")
+                    .trim();
+                } catch (e) {
+                  console.error("refusal gen failed", e);
+                }
+                if (refusal) {
+                  const failMsg: ChatMessage = {
+                    id: Date.now() + "_img_fail",
+                    sender: contactId,
+                    text: refusal,
+                    timestamp: nowStamp(),
+                  };
+                  setMessagesMap((prev) => ({
+                    ...prev,
+                    [contactId]: [...(prev[contactId] || []), failMsg],
+                  }));
+                }
                 setIsTypingMap((p) => ({ ...p, [contactId]: false }));
                 continue;
               }
+
               // Foto is klaar: laat de AI nu pas het bijbehorende berichtje
               // schrijven, mét de foto zichtbaar voor haar.
               let caption = "";
