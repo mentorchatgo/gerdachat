@@ -3,10 +3,16 @@
 
 const BASE = "https://generativelanguage.googleapis.com/v1beta";
 
+// Chat/TTS: alleen de standaard sleutel.
 function keys(): string[] {
-  const list: string[] = [];
   const primary = process.env.GEMINI_API_KEY;
-  if (primary) list.push(primary);
+  if (!primary) throw new Error("Missing GEMINI_API_KEY");
+  return [primary];
+}
+
+// Afbeeldingen: standaard sleutel + alle reservesleutels.
+function imageKeys(): string[] {
+  const list = keys().slice();
   const fallbacks = process.env.GEMINI_API_KEYS_FALLBACK;
   if (fallbacks) {
     for (const k of fallbacks.split(/[,\s]+/)) {
@@ -14,7 +20,6 @@ function keys(): string[] {
       if (t && !list.includes(t)) list.push(t);
     }
   }
-  if (!list.length) throw new Error("Missing GEMINI_API_KEY");
   return list;
 }
 
@@ -110,7 +115,7 @@ export async function generateImageGeminiNanoBanana2Lite(
   parts.push({ text: prompt });
 
   let lastErr = "";
-  const apiKeys = keys();
+  const apiKeys = imageKeys();
   for (const model of models) {
     for (const apiKey of apiKeys) {
       const url = `${BASE}/models/${model}:generateContent?key=${apiKey}`;
