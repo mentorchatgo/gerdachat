@@ -177,11 +177,70 @@ function shuffled<T>(arr: T[]): T[] {
   return a;
 }
 
+// Primair: Lovable AI Gateway met gemini-3.1-flash-lite-image (Nano Banana 2 Flash Lite).
+async function generateImageLovableGateway(prompt: string): Promise<string> {
+  const key = process.env.LOVABLE_API_KEY;
+  if (!key) throw new Error("Missing LOVABLE_API_KEY");
+  const { GERDA_REF_DATA_URLS } = await import("./gerda-refs.server");
+  const content: any[] = [];
+  for (const url of GERDA_REF_DATA_URLS) {
+    content.push({ type: "image_url", image_url: { url } });
+  }
+  content.push({ type: "text", text: prompt });
+
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Lovable-API-Key": key,
+      "X-Lovable-AIG-SDK": "vercel-ai-sdk",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3.1-flash-lite-image",
+      messages: [{ role: "user", content }],
+    }),
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => "");
+    throw new Error(`lovable gateway ${res.status}: ${txt.slice(0, 200)}`);
+  }
+  const data = (await res.json()) as any;
+  const msg = data?.choices?.[0]?.message ?? {};
+  const images = msg.images ?? [];
+  for (const img of images) {
+    const u = img?.image_url?.url || img?.url;
+    if (u) {
+      if (u.startsWith("data:")) return u;
+      const { data, mimeType } = await urlToInlineData(u);
+      return `data:${mimeType};base64,${data}`;
+    }
+  }
+  const mc = msg.content;
+  if (Array.isArray(mc)) {
+    for (const p of mc) {
+      const u = p?.image_url?.url || (p?.type === "image_url" ? p?.url : undefined);
+      if (u?.startsWith("data:")) return u;
+    }
+  }
+  if (typeof mc === "string") {
+    const m = mc.match(/data:image\/[a-z]+;base64,[A-Za-z0-9+/=]+/i);
+    if (m) return m[0];
+  }
+  throw new Error("lovable gateway: geen afbeelding in antwoord");
+}
+
 export async function generateImageGeminiNanoBanana2Lite(
   prompt: string,
   _referenceUrls: string[] = [],
 ): Promise<string> {
-  // 1) Primair: apimart.ai met OPENAI_API_KEY (Nano Banana 2 Flash Lite).
+  // 1) Primair: Lovable AI Gateway (Lovable tegoed), Nano Banana 2 Flash Lite.
+  try {
+    return await generateImageLovableGateway(prompt);
+  } catch (e: any) {
+    console.warn("[image] lovable gateway failed:", e?.message || e);
+  }
+
+  // 2) Daarna: apimart.ai met OPENAI_API_KEY.
   try {
     return await generateImageApimart(prompt);
   } catch (e: any) {
