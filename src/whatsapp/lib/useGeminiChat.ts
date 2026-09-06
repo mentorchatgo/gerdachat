@@ -43,8 +43,36 @@ const REAL_VIDEOS: Record<string, string> = {
   video_hamburger_hoofd_staren: "https://i.imgur.com/5xHG0O8.mp4",
 };
 
+// Zoekt de juiste foto/video-id, ook als het model quotes, streepjes,
+// hoofdletters of een net iets andere naam schrijft.
+function resolveAssetId(
+  raw: string | undefined,
+  table: Record<string, string>,
+): string | undefined {
+  if (!raw) return undefined;
+  const norm = raw
+    .toLowerCase()
+    .replace(/["'`.]/g, "")
+    .trim()
+    .replace(/[\s-]+/g, "_");
+  if (table[norm]) return norm;
+  const keys = Object.keys(table);
+  const contained = keys.find((k) => norm.includes(k) || k.includes(norm));
+  if (contained) return contained;
+  // Losse woorden vergelijken (bv. "kont" -> foto_kont, "geweer" -> video_geweer)
+  const words = norm.split("_").filter((w) => w.length > 2);
+  let best: { key: string; score: number } | undefined;
+  for (const k of keys) {
+    const kw = k.split("_");
+    const score = words.filter((w) => kw.includes(w)).length;
+    if (score > 0 && (!best || score > best.score)) best = { key: k, score };
+  }
+  return best?.key;
+}
+
 const nowStamp = () =>
   new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
 
 // Extract `count` evenly-spaced frames from a video URL as JPEG data URLs.
 async function extractVideoFrames(url: string, count = 6): Promise<string[]> {
