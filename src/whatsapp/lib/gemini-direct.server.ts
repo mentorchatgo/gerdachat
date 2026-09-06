@@ -103,10 +103,63 @@ export async function geminiDirectChat(
   throw new Error(lastErr || "Gemini direct failed");
 }
 
-// Afbeeldingen via Google AI Studio.
-// Hoofdmodel: gemini-3.1-flash-lite-image (Nano Banana 2 Flash Lite) — werkt altijd.
-// De rest is alleen reserve. Sleutels worden in willekeurige volgorde gebruikt
-// zodat de belasting over alle sleutels verdeeld wordt.
+// Afbeeldingen via apimart.ai (OpenAI-compatible) met OPENAI_API_KEY.
+// Model: gemini-3.1-flash-lite-image (Nano Banana 2 Flash Lite) — werkt altijd.
+// Fallback: Google AI Studio met alle sleutels.
+const APIMART_BASE = "https://api.apimart.ai/v1";
+const APIMART_MODEL = "gemini-3.1-flash-lite-image";
+
+async function generateImageApimart(prompt: string): Promise<string> {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) throw new Error("Missing OPENAI_API_KEY");
+  const { GERDA_REF_DATA_URLS } = await import("./gerda-refs.server");
+  const content: any[] = [];
+  for (const url of GERDA_REF_DATA_URLS) {
+    content.push({ type: "image_url", image_url: { url } });
+  }
+  content.push({ type: "text", text: prompt });
+
+  const res = await fetch(`${APIMART_BASE}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${key}`,
+    },
+    body: JSON.stringify({
+      model: APIMART_MODEL,
+      messages: [{ role: "user", content }],
+    }),
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => "");
+    throw new Error(`apimart ${res.status}: ${txt.slice(0, 200)}`);
+  }
+  const data = (await res.json()) as any;
+  const msg = data?.choices?.[0]?.message ?? {};
+  // Mogelijke vormen: images-array, content met image_url-parts, of data-URL in content.
+  const images = msg.images ?? [];
+  for (const img of images) {
+    const u = img?.image_url?.url || img?.url;
+    if (u) {
+      if (u.startsWith("data:")) return u;
+      const { data, mimeType } = await urlToInlineData(u);
+      return `data:${mimeType};base64,${data}`;
+    }
+  }
+  const mc = msg.content;
+  if (Array.isArray(mc)) {
+    for (const p of mc) {
+      const u = p?.image_url?.url || (p?.type === "image_url" ? p?.url : undefined);
+      if (u?.startsWith("data:")) return u;
+    }
+  }
+  if (typeof mc === "string") {
+    const m = mc.match(/data:image\/[a-z]+;base64,[A-Za-z0-9+/=]+/i);
+    if (m) return m[0];
+  }
+  throw new Error("apimart: geen afbeelding in antwoord");
+}
+
 const IMAGE_MODELS = [
   "gemini-3.1-flash-lite-image", // Nano Banana 2 Flash Lite (primair)
   "gemini-3.1-flash-image",
@@ -128,6 +181,14 @@ export async function generateImageGeminiNanoBanana2Lite(
   prompt: string,
   _referenceUrls: string[] = [],
 ): Promise<string> {
+  // 1) Primair: apimart.ai met OPENAI_API_KEY (Nano Banana 2 Flash Lite).
+  try {
+    return await generateImageApimart(prompt);
+  } catch (e: any) {
+    console.warn("[image] apimart failed:", e?.message || e);
+  }
+
+  // 2) Fallback: Google AI Studio met alle sleutels.
   const { GERDA_REF_INLINE } = await import("./gerda-refs.server");
   const parts: any[] = GERDA_REF_INLINE.map((r) => ({ inlineData: r }));
   parts.push({ text: prompt });
