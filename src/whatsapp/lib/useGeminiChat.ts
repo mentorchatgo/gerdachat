@@ -408,12 +408,15 @@ export function useGeminiChat(customConfig?: ContactConfig) {
             continue;
           }
 
-          // Parse [SEND_PHOTO: id]
-          const photoMatch = text.match(/\[SEND_PHOTO:\s*([a-z_]+)\]/i);
+          // Parse [SEND_PHOTO: id] — tolerant: quotes, streepjes, hoofdletters,
+          // extra woorden of een net iets andere id worden ook herkend.
+          const photoRaw = text.match(/\[\s*SEND_PHOTO\s*:\s*([^\]]+)\]/i)?.[1];
+          const videoRaw = text.match(/\[\s*SEND_VIDEO\s*:\s*([^\]]+)\]/i)?.[1];
+          const photoId = resolveAssetId(photoRaw, REAL_PHOTOS);
+          const videoId = resolveAssetId(videoRaw, REAL_VIDEOS);
           // Parse [GENERATE_IMAGE: prompt]
-          const genMatch = text.match(/\[GENERATE_IMAGE:\s*([^\]]+)\]/i);
-          // Parse [SEND_VIDEO: id]
-          const videoMatch = text.match(/\[SEND_VIDEO:\s*([a-z0-9_]+)\]/i);
+          const genMatch = text.match(/\[\s*GENERATE_IMAGE\s*:\s*([^\]]+)\]/i);
+
 
           let cleanText = text
             .replace(/\[REMEMBER:[^\]]+\]/gi, "")
@@ -559,12 +562,12 @@ export function useGeminiChat(customConfig?: ContactConfig) {
             }));
           }
 
-          if (videoMatch && REAL_VIDEOS[videoMatch[1].toLowerCase()]) {
+          if (videoId) {
             const vidMsg: ChatMessage = {
               id: Date.now() + "_v",
               sender: contactId,
               text: "",
-              videoUrl: REAL_VIDEOS[videoMatch[1].toLowerCase()],
+              videoUrl: REAL_VIDEOS[videoId],
               timestamp: nowStamp(),
             };
             setMessagesMap((prev) => ({
@@ -573,13 +576,12 @@ export function useGeminiChat(customConfig?: ContactConfig) {
             }));
           }
 
-          if (photoMatch) {
-            const url = REAL_PHOTOS[photoMatch[1]] || REAL_PHOTOS.foto_macdonalds;
+          if (photoId) {
             const photoMsg: ChatMessage = {
               id: Date.now() + "_p",
               sender: contactId,
               text: "",
-              imageUrl: url,
+              imageUrl: REAL_PHOTOS[photoId],
               timestamp: nowStamp(),
             };
             setMessagesMap((prev) => ({
@@ -588,13 +590,14 @@ export function useGeminiChat(customConfig?: ContactConfig) {
             }));
           }
 
-          if (!cleanText && !photoMatch && !videoMatch) {
+          if (!cleanText && !photoId && !videoId) {
             const fb: ChatMessage = {
               id: Date.now() + "_fb",
               sender: contactId,
               text: "Euh... ik weet even niet wat ik moet zeggen.",
               timestamp: nowStamp(),
             };
+
             setMessagesMap((prev) => ({
               ...prev,
               [contactId]: [...(prev[contactId] || []), fb],
