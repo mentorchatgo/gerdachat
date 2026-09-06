@@ -181,6 +181,14 @@ export async function generateImageGeminiNanoBanana2Lite(
   prompt: string,
   _referenceUrls: string[] = [],
 ): Promise<string> {
+  // 1) Primair: apimart.ai met OPENAI_API_KEY (Nano Banana 2 Flash Lite).
+  try {
+    return await generateImageApimart(prompt);
+  } catch (e: any) {
+    console.warn("[image] apimart failed:", e?.message || e);
+  }
+
+  // 2) Fallback: Google AI Studio met alle sleutels.
   const { GERDA_REF_INLINE } = await import("./gerda-refs.server");
   const parts: any[] = GERDA_REF_INLINE.map((r) => ({ inlineData: r }));
   parts.push({ text: prompt });
