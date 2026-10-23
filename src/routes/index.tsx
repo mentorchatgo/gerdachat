@@ -10,6 +10,10 @@ export const Route = createFileRoute("/")({
     meta: [
       { title: "WhatsApp — Gerda" },
       { name: "description", content: "Chat met Gerda via Lovable AI." },
+      { property: "og:title", content: "WhatsApp — Gerda" },
+      { property: "og:description", content: "Chat met Gerda, stuur foto's en deel spraakberichten." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
     links: [
       {
